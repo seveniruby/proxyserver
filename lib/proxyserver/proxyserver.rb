@@ -30,18 +30,24 @@ class ProxyServer
 		@raw_res=nil
 	end
 
+	#解码二进制，返回可读数据
 	def decode_req(raw_req)
 		p 'decode req'
 		@req=raw_req
+		@req
 	end
+	#解码二进制，返回可读数据
 	def decode_res(raw_res)
 		p 'decode res'
 		@res=raw_res
+		@res
 	end
+	#可读数据组装为二进制
 	def encode_req(req)
 		p 'encode_req'
 		p req
 		@raw_req=req
+		#简单返回，用户需要自己重载
 		@raw_req
 	end
 
@@ -104,6 +110,7 @@ class ProxyServer
 					server.run conn
 				end
 			rescue Exception=>e
+				puts "ERROR________________"
 				puts e
 			end
 		end
