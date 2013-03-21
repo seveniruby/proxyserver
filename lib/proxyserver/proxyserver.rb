@@ -16,11 +16,11 @@ module EventMachine
 		end
 	end
 end
-
 class ProxyServer
 	#config['host']  config['port'] config['forward_host'] config['forward_port']
 	def initialize(config)
 		@config=config
+		@thread=nil
 		@proxy=nil
 		@stub=nil
 		@mocks=[]
@@ -45,7 +45,6 @@ class ProxyServer
 	#可读数据组装为二进制
 	def encode_req(req)
 		p 'encode_req'
-		p req
 		@raw_req=req
 		#简单返回，用户需要自己重载
 		@raw_req
@@ -53,16 +52,12 @@ class ProxyServer
 
 	def encode_res(res)
 		p 'encode_res'
-		p res
 		@raw_res=res
 		@raw_res
 	end
-	def mock_req_res
+	def mock_req_res(req, res)
 		@mocks.each do |m|
-			@res=m.call @req
-			p "mock"
-			p @req
-			p @res
+			@res=m.call(req,res)
 		end
 	end
 
@@ -89,7 +84,7 @@ class ProxyServer
 		conn.on_response do |backend, raw_res|
 			@raw_res=raw_res
 			@res=self.decode_res(raw_res)
-			mock_req_res
+			mock_req_res @req, @res
 			@raw_res=self.encode_res(@res)
 			#需要增加多转发时候的请求销毁
 			@raw_res
@@ -102,18 +97,30 @@ class ProxyServer
 		end
 	end
 
-	def start
+	def start(debug=false)
 		server=self
-		Thread.new do
-			begin
-				proxy_start(:host=>@config['host'], :port=>@config['port'], :debug=>true) do |conn|
+		begin
+			@thread=Thread.new do
+				proxy_start(:host=>@config['host'], :port=>@config['port'], :debug=>debug) do |conn|
 					server.run conn
 				end
-			rescue Exception=>e
-				puts "ERROR________________"
-				puts e
 			end
+		rescue Exception=>e
+			puts "ERROR________________"
+			puts e
 		end
+		puts "#{self} server start on port #{@config['port']}"
+	end
+	def start_in_loop(debug=false)
+		server=self
+		@proxy=EventMachine::start_server(@config['host'],@config['port'], EventMachine::ProxyServer::Connection, :debug=>debug) do |conn|
+			server.run conn
+		end
+		EventMachine.add_periodic_timer(10) {
+			p @thread
+			p @proxy
+		}
+		puts "#{self} start on port #{@config['port']}"
 	end
 
 	def proxy_start(options, &blk)
@@ -122,6 +129,10 @@ class ProxyServer
 			@proxy=EventMachine::start_server(options[:host], options[:port], EventMachine::ProxyServer::Connection, options) do |c|
 				c.instance_eval(&blk)
 			end
+			EventMachine.add_periodic_timer(10) {
+				p @thread
+				p @proxy
+			}
 		end
 	end
 
@@ -131,6 +142,11 @@ class ProxyServer
 		EventMachine.stop_server @proxy
 		EventMachine.stop_event_loop
 		sleep 1
+	end
+
+	def keep
+		p @thread
+		@thread.join
 	end
 end
 

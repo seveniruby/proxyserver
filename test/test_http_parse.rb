@@ -1,29 +1,13 @@
 #encoding: utf-8
-require 'rubygems'
-require 'proxyserver'
+$:.unshift(File.dirname(__FILE__) + '/../test')
+
 require 'proxyserver/httpserver'
 require 'test/unit'
-require 'uri'
-require 'net/http'
+require 'test_helpper'
 
 #兼容jruby和warble
 if __FILE__==$0 || $0=='<script>'
 	class TestHttp < Test::Unit::TestCase
-
-		def get(url,proxy_addr=nil, proxy_port=nil)
-			uri = URI(url)
-			if proxy_addr
-				Net::HTTP.new(uri.host, uri.port, proxy_addr, proxy_port).start { |http|
-					# always proxy via your.proxy.addr:8080
-					res=http.get(uri.path)
-				}
-			else
-				res=Net::HTTP.get(uri) # => String
-			end
-			res
-
-		end
-
 		def test_get
 			get 'http://www.baidu.com'
 		end
