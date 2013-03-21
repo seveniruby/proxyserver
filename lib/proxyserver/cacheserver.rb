@@ -2,9 +2,6 @@
 require 'rubygems'
 require 'proxyserver'
 require 'http/parser'
-
-
-require 'rubygems'
 require 'eventmachine'
 
 class CacheStubServer < EventMachine::Connection
@@ -49,9 +46,9 @@ miss'
 		self
 	end
 
-	def self.start_in_loop
+	def self.start_in_loop(debug)
 		EventMachine.add_timer(1) {
-			@@server=EventMachine::start_server @@config['host'], @@config['port'], self
+			@@server=EventMachine::start_server @@config['host'], @@config['port'], self, :debug=>debug
 			puts "#{@@server} start on port #{@@config['port']}"
 			p @@server
 		}
@@ -95,7 +92,7 @@ class CacheServer < ProxyServer
 		req
 	end
 	def decode_res(res)
-		@cache_data[@req]<<res
+		@cache_data[@req]<<res if @cache_data[@req]
 		@blk.call if @blk
 		res
 	end
