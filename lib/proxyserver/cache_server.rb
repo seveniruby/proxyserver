@@ -4,13 +4,14 @@ require 'proxyserver'
 require 'http/parser'
 require 'eventmachine'
 
-class CacheStubServer < EventMachine::Connection
+class CacheServer < EventMachine::Connection
 	def post_init
 		puts "-- someone connected to the echo server!"
 	end
 
 	def receive_data data
 		begin
+			p self
 			@@config['data'][data].each do |d|
 				send_data d
 			end
@@ -32,8 +33,9 @@ miss'
 					p @@server
 
 					EventMachine.add_periodic_timer(10) {
-						p @@thread
-						p @@server
+						File.open('cache.data', 'w') do |f|
+							f.puts @@config.to_yaml
+						end
 					}
 
 
@@ -49,8 +51,12 @@ miss'
 	def self.start_in_loop(debug)
 		EventMachine.add_timer(1) {
 			@@server=EventMachine::start_server @@config['host'], @@config['port'], self, :debug=>debug
-			puts "#{@@server} start on port #{@@config['port']}"
-			p @@server
+			puts "#{self} #{@@server} start on port #{@@config['port']}"
+		}
+		EventMachine.add_periodic_timer(10) {
+			File.open('cache.data', 'w') do |f|
+				f.puts @@config.to_yaml
+			end
 		}
 		self
 
@@ -74,42 +80,6 @@ miss'
 
 end
 
-
-
-class CacheServer < ProxyServer
-	#config['host']  config['port'] config['forward_host'] config['forward_port']
-	def initialize(config)
-		@cache_data={}
-		@req=nil
-		@res=nil
-		@cache_enable=false
-		super config
-	end
-
-	def decode_req(req)
-		@req=req
-		@cache_data[@req]=[]
-		req
-	end
-	def decode_res(res)
-		@cache_data[@req]<<res if @cache_data[@req]
-		@blk.call if @blk
-		res
-	end
-	def encode_req(req)
-		req
-	end
-	def encode_res(res)
-		res
-	end
-
-	def data()
-		@cache_data
-	end
-	def callback(&blk)
-		@blk=blk
-	end
-end
 
 
 

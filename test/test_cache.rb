@@ -88,6 +88,7 @@ if __FILE__==$0 || $0=='<script>'
 
 
 		end
+
 		def stop
 			@cache.stop
 			@cache=nil
