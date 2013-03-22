@@ -1,30 +1,84 @@
+$:.unshift(File.dirname(__FILE__) + '/../test')
+
 require 'test/unit'
-require 'proxyserver/stub_server'
+require 'test_helpper'
 
 if __FILE__==$0 || $0=='<script>'
 	class TestStub < Test::Unit::TestCase
-		def test_stub
-			server=StubServer.new
-			server.start
-			server.stop
+		def setup
+			config={'host'=>'127.0.0.1', 'port'=>65531, 'data'=>{'hello'=>['word','boy']}}
+			@stub=Stub.new 'stub',config
+			@stub.start
 		end
+		def test_data
+			client=TCPSocket.new('127.0.0.1', 65531)
+			client.write 'hello'
+			res=client.readpartial(1000)
+			assert_equal 'wordboy',res
+		end
+		def test_mock
+			@stub.mock do |req, res|
+				p 'mock'
+				res="xxxx" if req=='wwww'
+				res
+			end
+			client=TCPSocket.new('127.0.0.1', 65531)
+			client.write 'hello'
+			res=client.readpartial(1000)
+			assert_equal 'wordboy',res
 
-		def test_res
-			require 'open-uri'
-			server=StubServer.new
-			server.start
-			res=open('http://127.0.0.1:65530/')
-			assert_equal 'stub',res.read
-			server.stop
+			client.write 'wwww'
+			res=client.readpartial(1000)
+			assert_equal 'xxxx',res
 		end
 
 		def test_two_stub
-			server=StubServer.new
-			server2=StubServer.new 8077
-			server.start
-			server2.start
-			server.stop
-			server2.stop
+			p EM.reactor_running?
+			config={'host'=>'127.0.0.1', 'port'=>65530, 'data'=>{'hello'=>['word','boy']}}
+			@stub2=Stub.new 'stub2', config
+			@stub2.start
+
+			p EM.reactor_running?
+			config={'host'=>'127.0.0.1', 'port'=>65532, 'data'=>{'hello'=>['word','boy']}}
+			@stub3=Stub.new 'stub3', config
+			@stub3.start
+
+			sleep 2
+
+			client=TCPSocket.new('127.0.0.1', 65530)
+			client.write 'hello'
+			res=client.readpartial(1000)
+			assert_equal 'wordboy',res
+
+			client=TCPSocket.new('127.0.0.1', 65531)
+			client.write 'hello'
+			res=client.readpartial(1000)
+			assert_equal 'wordboy',res
 		end
+		def test_one_stub
+			p EM.reactor_running?
+			config={'host'=>'127.0.0.1', 'port'=>65530, 'data'=>{'hello'=>['word','boy']}}
+			@stub2=Stub.new 'stub2', config
+			@stub2.start
+
+			sleep 3
+
+			client=TCPSocket.new('127.0.0.1', 65530)
+			client.write 'hello'
+			res=client.readpartial(1000)
+			assert_equal 'wordboy',res
+			client.write 'hello'
+			res=client.readpartial(1000)
+			assert_equal 'wordboy',res
+			client2=TCPSocket.new('127.0.0.1', 65530)
+			client2.write 'hello'
+			res=client2.readpartial(1000)
+			assert_equal 'wordboy',res
+		end
+
+		def teardowns
+			@stub.stop
+		end
+
 	end
 end

@@ -5,7 +5,7 @@ require 'http/parser'
 require 'eventmachine'
 
 
-class CacheServer < ProxyServer
+class CacheProxy < ProxyServer
 	#config['host']  config['port'] config['forward_host'] config['forward_port']
 	def initialize(config)
 		@cache_data={}
