@@ -1,6 +1,6 @@
 #encoding: utf-8
 require 'rubygems'
-require 'proxyserver'
+require 'proxy_server'
 require 'iso8583'
 require 'iso8583/berlin'
 

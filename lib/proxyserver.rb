@@ -1,6 +1,10 @@
+require 'eventmachine'
 require "proxyserver/version"
-require "proxyserver/proxyserver"
-require "proxyserver/httpserver"
+require "proxyserver/connection"
+require "proxyserver/backend"
+require "proxyserver/proxy_server"
+require "proxyserver/form_proxy"
+require "proxyserver/http_proxy"
 require "proxyserver/stub"
 require "proxyserver/mysql_stub"
 

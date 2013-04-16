@@ -1,6 +1,5 @@
 #encoding: utf-8
 require 'rubygems'
-require 'em-proxy'
 require 'yaml'
 require 'json'
 require 'base64'
@@ -16,6 +15,28 @@ module EventMachine
 		end
 	end
 end
+
+
+#存放request和response的结构。data可人可读可写的数据，raw为真正在底层传输的数据
+class ProxyRequest
+  attr_accessor :data
+  attr_accessor :raw
+  def initialize
+    @data=''
+    @raw=''
+  end
+end
+
+class ProxyResponse
+  attr_accessor :data
+  attr_accessor :raw
+  def initialize
+    @data=''
+    @raw=''
+  end
+end
+
+
 class ProxyServer
 	#config['host']  config['port'] config['forward_host'] config['forward_port']
 	def initialize(config)
@@ -24,40 +45,34 @@ class ProxyServer
 		@proxy=nil
 		@stub=nil
 		@mocks=[]
-		@req=nil
-		@res=nil
+    @request=ProxyRequest.new
+    @response=ProxyResponse.new
 		@raw_req=nil
 		@raw_res=nil
 	end
 
 	#解码二进制，返回可读数据
-	def decode_req(raw_req)
-		p 'decode req'
-		@req=raw_req
-		@req
+	def decode_req(req)
+    req.data=req.raw
 	end
 	#解码二进制，返回可读数据
-	def decode_res(raw_res)
-		p 'decode res'
-		@res=raw_res
-		@res
-	end
+	def decode_res(res)
+    res.data=res.raw
+  end
+
 	#可读数据组装为二进制
 	def encode_req(req)
-		p 'encode_req'
-		@raw_req=req
-		#简单返回，用户需要自己重载
-		@raw_req
+    req.raw=req.data
 	end
 
 	def encode_res(res)
-		p 'encode_res'
-		@raw_res=res
-		@raw_res
-	end
-	def mock_req_res(req, res)
+    res.raw=res.data
+  end
+  #提供用户机制干预结果。
+  #可参考测试用例中的mock方法
+	def mock_process(req, res)
 		@mocks.each do |m|
-			@res=m.call(req,res)
+			m.call(req,res)
 		end
 	end
 
@@ -66,6 +81,8 @@ class ProxyServer
 	end
 
 	def run(conn)
+
+    #始终以代理的方式运行，如果没有设置转发，就自己自我转发
 		if @config['forward_host']
 			conn.server :forward, :host =>@config['forward_host'], :port =>@config['forward_port']||80
 		else
@@ -75,19 +92,21 @@ class ProxyServer
 		end
 		# modify / process request stream
 		conn.on_data do |raw_req|
-			@raw_req=raw_req
-			@req=self.decode_req(raw_req)
-			@raw_req=self.encode_req(@req)
-			@raw_req
+      @request.raw=raw_req
+			self.decode_req(@request)
+			self.encode_req(@request)
+      #must return the raw data
+      @request.raw
 		end
 		# modify / process response stream
 		conn.on_response do |backend, raw_res|
-			@raw_res=raw_res
-			@res=self.decode_res(raw_res)
-			mock_req_res @req, @res
-			@raw_res=self.encode_res(@res)
-			#需要增加多转发时候的请求销毁
-			@raw_res
+      @response.raw=raw_res
+			self.decode_res(@response)
+			self.mock_process(@request, @response)
+			self.encode_res(@response)
+			#此处如果用于多转发时，需要增加多转发时候的请求销毁，暂未用到，所以保持现状
+      #must return raw data
+			@response.raw
 		end
 
 		# termination logic
@@ -100,6 +119,7 @@ class ProxyServer
 	def start(debug=false)
 		server=self
 		begin
+      #在后台启动，防止block进程
 			@thread=Thread.new do
 				proxy_start(:host=>@config['host'], :port=>@config['port'], :debug=>debug) do |conn|
 					server.run conn
@@ -110,7 +130,9 @@ class ProxyServer
 			puts e
 		end
 		puts "#{self} server start on port #{@config['port']}"
-	end
+  end
+
+  #用于在EM.run中，这样可以启动多个server，将来可以考虑与start方法合并
 	def start_in_loop(debug=false)
 		server=self
 		@proxy=EventMachine::start_server(@config['host'],@config['port'], EventMachine::ProxyServer::Connection, :debug=>debug) do |conn|
@@ -136,6 +158,7 @@ class ProxyServer
 		end
 	end
 
+  #停止服务运行
 	def stop
 		puts "Terminating ProxyServer"
 		p @proxy
@@ -144,6 +167,7 @@ class ProxyServer
 		sleep 1
 	end
 
+  #保持服务运行
 	def keep
 		p @thread
 		@thread.join

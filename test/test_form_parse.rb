@@ -11,7 +11,7 @@ if __FILE__==$0 || $0=='<script>'
 	class TestHttp < Test::Unit::TestCase
 		def test_http
 			config={"host"=>'0.0.0.0','port'=>8078,'forward_host'=>'www.baidu.com',"forward_port"=>80}
-			server=HttpServer.new config
+			server=HttpProxy.new config
 			server.start
 			sleep 3
 
@@ -24,7 +24,7 @@ if __FILE__==$0 || $0=='<script>'
 
 		def test_hook
 			config={"host"=>'0.0.0.0','port'=>8078,'forward_host'=>'www.baidu.com',"forward_port"=>80}
-			server=HttpServer.new config
+			server=HttpProxy.new config
 			server_2.on_data do |req,res|
 				p req
 				p res

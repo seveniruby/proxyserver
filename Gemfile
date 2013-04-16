@@ -1,7 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'proxyserver'
-gem 'em-proxy'
+gem 'eventmachine'
 gem 'iso8583'
-gem 'http_parser'
+gem 'http_parser.rb'
 
