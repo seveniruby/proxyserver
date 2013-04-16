@@ -3,6 +3,7 @@
 #
 class Proxys
 	def self.new(config)
+    include ProxyServer
 		case config['protocol']
 		when 'http'
 			server=HttpProxy.new config

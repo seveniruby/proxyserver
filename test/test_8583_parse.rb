@@ -39,7 +39,7 @@ if __FILE__==$0 || $0=='<script>'
 
 			#启动代理
 			config={"host"=>'0.0.0.0','port'=>8078,'forward_host'=>'127.0.0.1',"forward_port"=>65530}
-			server=ISO8583Server.new config
+			server=ISO8583Proxy.new config
 			server.start
 
 			#发送8583数据包
