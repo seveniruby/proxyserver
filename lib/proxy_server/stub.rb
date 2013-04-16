@@ -1,7 +1,6 @@
 #encoding: utf-8
 require 'rubygems'
 require 'proxy_server'
-require 'http/parser'
 require 'eventmachine'
 
 class Stub < EventMachine::Connection

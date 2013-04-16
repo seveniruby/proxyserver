@@ -1,11 +1,11 @@
 #encoding: utf-8
 require 'rubygems'
 require 'proxy_server'
-require 'http_parser'
-require 'http/parser'
+#require 'http_parser'
+#require 'http/parser'
 require 'uri'
 require 'cgi'
-
+=begin
 module ProxyServer
   class FormProxy < ProxyServer
     def initialize(config)
@@ -15,7 +15,7 @@ module ProxyServer
       super(config)
     end
 
-    def decode_req(req)
+    def decode_request(req)
       begin
         @raw_req=req
         @http.parse req
@@ -32,12 +32,12 @@ module ProxyServer
       @data['req']
     end
 
-    def encode_req(req)
+    def encode_request(req)
       @raw_req
 
     end
 
-    def decode_res(res)
+    def decode_response(res)
       @raw_res=res
       begin
         @http.parse res
@@ -50,10 +50,11 @@ module ProxyServer
       res
     end
 
-    def encode_res(res)
+    def encode_response(res)
       @raw_res
     end
   end
 end
 
+=end
 

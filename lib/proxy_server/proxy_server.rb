@@ -42,6 +42,11 @@ module ProxyServer
 
   class ProxyServer
     #config['host']  config['port'] config['forward_host'] config['forward_port']
+
+    attr_accessor :em_run
+    attr_accessor :server_run
+    attr_accessor :proxy
+
     def initialize(config)
       @config=config
       @thread=nil
@@ -52,24 +57,25 @@ module ProxyServer
       @response=ProxyResponse.new
       @raw_req=nil
       @raw_res=nil
+      @@em_run=false
     end
 
     #解码二进制，返回可读数据
-    def decode_req(req)
+    def decode_request(req)
       req.data=req.raw
     end
 
     #解码二进制，返回可读数据
-    def decode_res(res)
+    def decode_response(res)
       res.data=res.raw
     end
 
     #可读数据组装为二进制
-    def encode_req(req)
+    def encode_request(req)
       req.raw=req.data
     end
 
-    def encode_res(res)
+    def encode_response(res)
       res.raw=res.data
     end
 
@@ -86,7 +92,6 @@ module ProxyServer
     end
 
     def run(conn)
-
       #始终以代理的方式运行，如果没有设置转发，就自己自我转发
       if @config['forward_host']
         conn.server :forward, :host => @config['forward_host'], :port => @config['forward_port']||80
@@ -98,17 +103,18 @@ module ProxyServer
       # modify / process request stream
       conn.on_data do |raw_req|
         @request.raw=raw_req
-        self.decode_req(@request)
-        self.encode_req(@request)
+        self.decode_request(@request)
+        self.encode_request(@request)
         #must return the raw data
         @request.raw
       end
       # modify / process response stream
       conn.on_response do |backend, raw_res|
         @response.raw=raw_res
-        self.decode_res(@response)
+        self.decode_response(@response)
         self.mock_process(@request, @response)
-        self.encode_res(@response)
+        self.encode_response(@response)
+
         #此处如果用于多转发时，需要增加多转发时候的请求销毁，暂未用到，所以保持现状
         #must return raw data
         @response.raw
@@ -123,52 +129,44 @@ module ProxyServer
 
     def start(debug=false)
       server=self
-      begin
-        #在后台启动，防止block进程
-        @thread=Thread.new do
-          proxy_start(:host => @config['host'], :port => @config['port'], :debug => debug) do |conn|
+      #在后台启动，防止block进程
+      Thread.new do
+        EM.run do
+          @proxy=EventMachine::start_server(@config['host'], @config['port'],
+                                            EventMachine::ProxyServer::Connection, :debug => debug) do |conn|
+            server.em_run=true
             server.run conn
           end
         end
-      rescue Exception => e
-        puts "ERROR________________"
-        puts e
       end
+      sleep 2
       puts "#{self} server start on port #{@config['port']}"
+
+
     end
 
     #用于在EM.run中，这样可以启动多个server，将来可以考虑与start方法合并
-    def start_in_loop(debug=false)
+    #can't work in jruby
+    def start_in_em(debug=false)
       server=self
-      @proxy=EventMachine::start_server(@config['host'], @config['port'], EventMachine::ProxyServer::Connection, :debug => debug) do |conn|
-        server.run conn
-      end
-      EventMachine.add_periodic_timer(10) {
-        p @thread
-        p @proxy
-      }
-      puts "#{self} start on port #{@config['port']}"
-    end
-
-    def proxy_start(options, &blk)
-      #EM.epoll
-      EM.run do
-        @proxy=EventMachine::start_server(options[:host], options[:port], EventMachine::ProxyServer::Connection, options) do |c|
-          c.instance_eval(&blk)
+      Thread.new do
+        p 'new'
+        @proxy=EventMachine::start_server(@config['host'], @config['port'],
+                                          EventMachine::ProxyServer::Connection, :debug => debug) do |conn|
+          server.run conn
+          server.em_run=true
         end
-        EventMachine.add_periodic_timer(10) {
-          p @thread
-          p @proxy
-        }
+        p 'start'
       end
     end
 
     #停止服务运行
     def stop
       puts "Terminating ProxyServer"
-      p @proxy
+      @thread.exit if @thread
+      #jruby's bug stop_server would be stop em.run
       EventMachine.stop_server @proxy
-      EventMachine.stop_event_loop
+      #EventMachine.stop_event_loop
       sleep 1
     end
 

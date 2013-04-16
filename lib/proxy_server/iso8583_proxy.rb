@@ -29,7 +29,7 @@ module ProxyServer
     end
 
     def decode_res(raw_res)
-      p "iso decode_res"
+      p "iso decode_response"
       p raw_res
       @berlin=BerlinMessage.parse raw_res
       p @berlin
