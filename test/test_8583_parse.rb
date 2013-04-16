@@ -1,5 +1,5 @@
 require 'rubygems'
-require 'proxyserver'
+require 'proxy_server'
 require 'proxyserver/iso8583server'
 require 'proxyserver/echo_stub_server'
 require 'test/unit'

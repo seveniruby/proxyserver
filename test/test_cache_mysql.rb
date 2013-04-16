@@ -1,6 +1,6 @@
 $:.unshift(File.dirname(__FILE__) + '/../lib/')
-require 'proxyserver'
-require 'proxyserver/cacheserver'
+require 'proxy_server'
+require 'proxy_server/cacheserver'
 
 if __FILE__==$0 || $0=='<script>'
 	#mysql主机  真实代理  cache代理

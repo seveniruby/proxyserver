@@ -1,7 +1,7 @@
 #encoding: utf-8
 require 'rubygems'
-require 'proxyserver'
-require 'proxyserver/formserver'
+require 'proxy_server'
+require 'proxy_server/formserver'
 require 'test/unit'
 require 'net/http'
 require 'uri'

@@ -1,6 +1,6 @@
 $:.unshift(File.dirname(__FILE__) + '/../lib/')
 require 'rubygems'
-require 'proxyserver'
+require 'proxy_server'
 require 'uri'
 require 'net/http'
 
