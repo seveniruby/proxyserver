@@ -211,15 +211,20 @@ if __FILE__==$0 || $0=='<script>'
       uri = URI('http://127.0.0.1:8078/web')
       res = Net::HTTP.post_form(uri, 'q' => 'ruby', 'query' => 'ruby -english')
       assert_equal '200', res.code
-      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
-      assert_equal '200', res.code
-      res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'systemtap -english')
-      assert_equal '200', res.code
-      assert_equal 3, server.testcases.count
-      p server.testcases
 
-      server.record=false
-      server.replay_request
+      #res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
+      #assert_equal '200', res.code
+      #res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'systemtap -english')
+      #assert_equal '200', res.code
+      #assert_equal 3, server.testcases.count
+
+      expect=server.testcase
+      testcase=server.replay_request
+      p expect
+      p testcase
+      assert_equal expect, testcase
+
+      sleep 3
     end
   end
 end

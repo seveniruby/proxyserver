@@ -5,6 +5,8 @@ require 'json'
 require 'base64'
 require 'proxy_server/stub_server'
 require 'proxy_server/proxy_client'
+require 'test/unit'
+require 'test/unit/assertions'
 
 #解决jruby下的一个bug
 module EventMachine
@@ -115,80 +117,66 @@ module ProxyServer
     #测试用例执行完成的标记
     def testcase_stop
       #重新确定最终值
-      @testcases[-1]=@testcase.dup if @testcase!=[]
-    end
-
-    #传入一个request，返回一个response
-    def send(req)
-      res=ProxyResponse.new
-      encode_request(req)
-      client=TCPSocket.new(@config['host'], @config['port'])
-      client.send req.raw, 0
-      p 'read'
-
-      #res.raw=client.read
-      begin
-        while buf=client.readpartial(1024)
-          res.raw+=buf
+      if @testcases!=[]
+        if @testcase!=[]
+          @testcases[-1]=@testcase.dup
         end
-      rescue Exception => e
-        p e.message
       end
-      p res.raw
-      client.close
-      decode_response(res)
-      res
     end
 
-    #用于回放请求，做客户端
-    def replay_request
-      p 'replay'
+    #用于回放请求，做客户端，使用em进行回放
+    def replay_request(testcase=nil)
+      testcase||=@testcase
       req=ProxyRequest.new
       expect=ProxyResponse.new
       res=ProxyResponse.new
 
-      @testcases.each do |expect|
-        p expect
-        p expect.count
-        EM.run do
-          index=0
-          EM.connect @config['host'], @config['port'], ProxyClient do |client|
-            client.on_res do |data|
-              p 'on_res'
-              p data
-              index+=1
-              res.raw=data
-              self.decode_response(res)
-              self.record_response(res)
-              #assert_equal expect[index][:req], res.data
-              #已经没有待发送的请求时
-              p index
-              p expect.count
+      #clear testcases for record new data
+      testcases_old=@testcases
+      @testcases=[]
+      @testcase=[]
+      begin
+          EM.run do
+            index=0
+            #in windows, connect 0.0.0.0 would fail , windows only understand  127.0.0.1
+            EM.connect '127.0.0.1', @config['port'], ProxyClient do |client|
+              client.on_close do
+
+              end
+              client.on_res do |data|
+                #已经没有待发送的请求时，暂时只针对单次请求的情况
+=begin
               if expect.count<=index
                 p 'diff'
                 p expect
                 p @testcase
                 EM.stop
               end
-              #如果下一个是req，就发送，否则等待response，将来需要修改为循环以解决多个请求对应一个response的情况
-              if expect[index+1][:req]
-                index+=1
-                req.data=expect[index][:req]
-                record_request(req)
-                encode_request(req)
-                client.send_data req.raw
+=end
+                #如果下一个是req，就发送，否则等待response，将来需要修改为循环以解决多个请求对应一个response的情况
+=begin
+                if expect[index+1][:req]
+                  index+=1
+                  req.data=expect[index][:req]
+                  record_request(req)
+                  encode_request(req)
+                  client.send_data req.raw
+                end
+=end
               end
+              req.data=testcase[index][:req]
+              encode_request(req)
+              #client.send_data "GET / HTTP/1.1\r\nHost: www.sogou.com\r\n\r\n"
+              client.send_data req.raw
             end
-            req.data=expect[index][:req]
-            record_request(req)
-            encode_request(req)
-            p 'send'
-            p req.raw
-            p client
-            client.send_data req.raw
+            sleep 3
           end
-        end
+      rescue Exception => e
+        p "ERROR++++++++++++"
+        p e.message
+        raise
       end
+      @testcase
     end
 
     #用于回放响应，做mock服务器

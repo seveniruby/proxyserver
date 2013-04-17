@@ -5,15 +5,26 @@ require 'eventmachine'
 module ProxyServer
   class ProxyClient < EventMachine::Connection
     def initialize
-      @on_init_service||=[]
-      @on_res_service||=[]
+      @on_init_service=[]
+      @on_res_service=[]
+      @on_close_service=[]
       super
     end
     def post_init
+      p 'post_init'
       @on_init_service.each do |s|
         s.call
       end
       #send_data "GET / HTTP/1.1\r\nHost: www.sogou.com\r\n\r\n"
+    end
+    def connection_completed
+      p 'connect'
+    end
+    def unbind
+      p 'close connect'
+      @on_close_service.each do |s|
+        s.call
+      end
     end
 
     def receive_data(data)
@@ -26,6 +37,9 @@ module ProxyServer
     end
     def on_res(&blk)
       @on_res_service<<blk
+    end
+    def on_close(&blk)
+      @on_close_service<<blk
     end
     def replay(testcase)
       @testcase=[]
