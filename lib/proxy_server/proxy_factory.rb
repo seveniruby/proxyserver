@@ -3,12 +3,12 @@
 #
 class Proxys
 	def self.new(config)
-    include ProxyServer
+    include ProxyServer::ProxyServer
 		case config['protocol']
 		when 'http'
-			server=HttpProxy.new config
+			server=ProxyServer::HttpProxy.new config
 		when 'form'
-			server=FormProxy.new config
+			server=ProxyServer::FormProxy.new config
 		when 'mysql'
 		when 'cache'
 		end
