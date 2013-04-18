@@ -27,6 +27,7 @@ if __FILE__==$0 || $0=='<script>'
       server.stop
     end
 
+
     def test_two_server
       host1='www.baidu.com'
       config1={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => host1, "forward_port" => 80}
