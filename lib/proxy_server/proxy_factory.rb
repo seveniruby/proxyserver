@@ -2,18 +2,19 @@
 #
 #
 class Proxys
-	def self.new(config)
-    include ProxyServer::ProxyServer
-		case config['protocol']
-		when 'http'
-			server=ProxyServer::HttpProxy.new config
-		when 'form'
-			server=ProxyServer::FormProxy.new config
-		when 'mysql'
-		when 'cache'
-		end
+  def self.new(config)
+    case config['protocol']
+      when 'http'
+        server=ProxyServer::HttpProxy.new config
+      when 'form'
+        server=ProxyServer::FormProxy.new config
+      when 'mysql'
+      when 'cache'
+      when 'tcp'
+        server=ProxyServer::ProxyServer.new config
+    end
 
-		return server
-	end
+    return server
+  end
 
 end
