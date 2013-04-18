@@ -27,6 +27,19 @@ if __FILE__==$0 || $0=='<script>'
       server.stop
     end
 
+    def test_start
+      config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
+      server=ProxyServer::ProxyServer.new config
+      server.start
+
+
+      server.info='xxx'
+      config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
+      server=ProxyServer::ProxyServer.new config
+      server.start
+      assert_equal "unable to open socket acceptor: java.net.BindException: Address already in use: bind", server.info
+
+    end
 
     def test_two_server
       host1='www.baidu.com'

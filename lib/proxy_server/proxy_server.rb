@@ -52,6 +52,7 @@ module ProxyServer
     attr_accessor :record
     attr_accessor :testcase
     attr_accessor :testcases
+    attr_accessor :info
 
     def initialize(config)
       @config=config
@@ -68,7 +69,7 @@ module ProxyServer
       @testcases=[]
       @record=false
       @record_mode=1
-
+      @info=''
 
     end
 
@@ -232,7 +233,9 @@ module ProxyServer
     end
 
     def start(debug=false)
+      status=true
       #在后台启动，防止block进程
+
       Thread.new do
         begin
           EM.run do
@@ -242,17 +245,20 @@ module ProxyServer
               self.run conn
             end
           end
+
         rescue Exception => e
+          @info=e.message
+          status=false
           puts "ERROR__________________"
           puts e.message
           puts e.backtrace
-          raise
         end
       end
       sleep 2
-      puts "#{self} server start on port #{@config['port']}"
-
-
+      if status
+        @info="#{self} server start on port #{@config['port']}"
+      end
+      puts @info
     end
 
     #用于在EM.run中，这样可以启动多个server，将来可以考虑与start方法合并
