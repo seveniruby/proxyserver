@@ -3,6 +3,8 @@
 require 'proxy_server'
 require 'webrick'
 
+
+#还没有完工，还没有选择好使用哪个http的解析器
 #em-http-request has different action, so i reject it
 module ProxyServer
   class HttpProxy < ProxyServer

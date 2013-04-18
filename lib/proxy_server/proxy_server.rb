@@ -246,6 +246,7 @@ module ProxyServer
           puts "ERROR__________________"
           puts e.message
           puts e.backtrace
+          raise
         end
       end
       sleep 2
@@ -273,6 +274,7 @@ module ProxyServer
       begin
         @thread.exit if @thread
       rescue
+        raise
       end
       #EventMachine.stop_event_loop
       sleep 2

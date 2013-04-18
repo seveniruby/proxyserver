@@ -146,15 +146,17 @@ if __FILE__==$0 || $0=='<script>'
       config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
       server=ProxyServer::ProxyServer.new config
       server.mock do |req, res|
+        #替换响应的内容
+        #jruby下会有异常，是这段代码导致的，以后需要增加线程安全锁, cruby不会有异常提示
         res.data.gsub!('seveniruby', 'rubyiseven')
       end
       server.start
+      sleep 3
       uri = URI('http://127.0.0.1:8078/web')
       res=Net::HTTP.post_form(uri, 'q' => 'seveniruby', 'query' => 'seveniruby -english')
-      p res.body.index('seveniruby')
-      p res.body.index('rubyiseven')
       assert_equal nil, res.body.index('seveniruby')
-      assert_equal true, res.body.index('rubyiseven')>0
+      #判断是否出现在响应中
+      assert_equal true, res.body.index('rubyiseven')>20
       server.stop
     end
 

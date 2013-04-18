@@ -9,7 +9,6 @@ def get(url, proxy_addr=nil, proxy_port=nil)
   res=nil
   Net::HTTP.new(uri.host, uri.port, proxy_addr, proxy_port).start { |http|
     # always proxy via your.proxy.addr:8080
-    p "#{uri.path}?#{uri.query}"
     res=http.get("#{uri.path}?#{uri.query}")
   }
   res
