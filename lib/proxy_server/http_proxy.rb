@@ -3,6 +3,7 @@
 require 'proxy_server'
 require 'webrick'
 
+#em-http-request has different action, so i reject it
 module ProxyServer
   class HttpProxy < ProxyServer
     #config['host']  config['port'] config['forward_host'] config['forward_port']

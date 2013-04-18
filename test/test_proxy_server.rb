@@ -207,26 +207,60 @@ if __FILE__==$0 || $0=='<script>'
       config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
       server=ProxyServer::ProxyServer.new config
       server.record=true
-      server.start()
-      uri = URI('http://127.0.0.1:8078/web')
-      res = Net::HTTP.post_form(uri, 'q' => 'ruby', 'query' => 'ruby -english')
-      assert_equal '200', res.code
-
+      server.start(true)
+      #幸好现在的网站都不检查host，后续做http的应用时，host需要修改
       #res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
       #assert_equal '200', res.code
       #res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'systemtap -english')
       #assert_equal '200', res.code
       #assert_equal 3, server.testcases.count
 
+
+      uri = URI('http://127.0.0.1:8078/docs/about.htm')
+      res = Net::HTTP.post_form(uri, 'q' => 'ruby', 'query' => 'ruby -english')
+      assert_equal '200', res.code
       expect=server.testcase
       testcase=server.replay_request
-      p expect
+      #用http协议不太合适，因为http协议有分包策略，所以同样的请求，得到的结果也可能是不同的，在协议应用方面，还需要做兼容改进
+      index=0
       p testcase
-      assert_equal expect, testcase
+      assert_equal expect[0][:res][1..-1].join, testcase[0][:res][1..-1].join
 
+      uri = URI('http://127.0.0.1:8078/web')
+      res = Net::HTTP.post_form(uri, 'q' => 'ruby', 'query' => 'ruby -english')
+      assert_equal '200', res.code
+
+      expect=server.testcase
+      testcase=server.replay_request
+      #用http协议不太合适，因为http协议有分包策略，所以同样的请求，得到的结果也可能是不同的，在协议应用方面，还需要做兼容改进
+      index=0
+      #同样的查询得到的动态页面也是不一样，这个必须是fail
+      assert_not_equal expect[0][:res][1..-1].join, testcase[0][:res][1..-1].join
       sleep 3
     end
+
+    def test_multi_response
+      config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
+      server=ProxyServer::ProxyServer.new config
+      server.record=true
+      server.start()
+
+      uri = URI('http://127.0.0.1:8078/web')
+      #幸好现在的网站都不检查host，后续做http的应用时，host需要修改
+      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
+      assert_equal '200', res.code
+      #分包的个数是动态变化的
+      assert_equal true, server.testcase[0][:res].count>10
+      res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'systemtap -english')
+      assert_equal '200', res.code
+      assert_equal true, server.testcase[0][:res].count>10
+      res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'systemtap -english')
+      assert_equal '200', res.code
+      assert_equal 3, server.testcases.count
+      assert_equal true, server.testcase[0][:res].count>10
+    end
   end
+
 end
 
 

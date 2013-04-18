@@ -104,7 +104,11 @@ module ProxyServer
     end
 
     def record_response(res)
-      @testcase<<{:res => res.data}
+      #@testcase<<{:res => res.data}
+      #使用更好的结构来保存数据
+      #:req=>xxx, :res=[xxx,xxxx]
+      @testcase[-1][:res]||=[]
+      @testcase[-1][:res]<<res.data
     end
 
     #定义测试用例的开始标记
@@ -135,42 +139,27 @@ module ProxyServer
       testcases_old=@testcases
       @testcases=[]
       @testcase=[]
+      unbind=false
       begin
-          EM.run do
-            index=0
-            #in windows, connect 0.0.0.0 would fail , windows only understand  127.0.0.1
-            EM.connect '127.0.0.1', @config['port'], ProxyClient do |client|
-              client.on_close do
-
-              end
-              client.on_res do |data|
-                #已经没有待发送的请求时，暂时只针对单次请求的情况
-=begin
-              if expect.count<=index
-                p 'diff'
-                p expect
-                p @testcase
-                EM.stop
-              end
-=end
-                #如果下一个是req，就发送，否则等待response，将来需要修改为循环以解决多个请求对应一个response的情况
-=begin
-                if expect[index+1][:req]
-                  index+=1
-                  req.data=expect[index][:req]
-                  record_request(req)
-                  encode_request(req)
-                  client.send_data req.raw
-                end
-=end
-              end
-              req.data=testcase[index][:req]
+        EM.run do
+          index=0
+          #in windows, connect 0.0.0.0 would fail , windows only understand  127.0.0.1
+          EM.connect '127.0.0.1', @config['port'], ProxyClient do |client|
+            client.on_res do
+              unbind=true
+            end
+            testcase.each do |tc|
+              req.data=tc[:req]
               encode_request(req)
               #client.send_data "GET / HTTP/1.1\r\nHost: www.sogou.com\r\n\r\n"
+              p req.raw
               client.send_data req.raw
             end
-            sleep 3
           end
+          while !unbind
+            sleep 2
+          end
+        end
       rescue Exception => e
         p "ERROR++++++++++++"
         p e.message
@@ -196,6 +185,10 @@ module ProxyServer
       @mocks<< blk
     end
 
+    def send(data)
+      @conn.send_data data
+    end
+
     def run(conn)
       #始终以代理的方式运行，如果没有设置转发，就自己自我转发
       if @config['forward_host']
@@ -206,6 +199,7 @@ module ProxyServer
         @stub.start
         conn.server :forward, :host => '127.0.0.1', :port => 65530
       end
+
       # modify / process request stream
       conn.on_data do |raw_req|
         @request.raw=raw_req
@@ -233,18 +227,19 @@ module ProxyServer
         # terminate connection (in duplex mode, you can terminate when prod is done)
         # unbind if backend == :srv
       end
+
+
     end
 
     def start(debug=false)
-      server=self
       #在后台启动，防止block进程
       Thread.new do
         begin
           EM.run do
             @proxy=EventMachine::start_server(@config['host'], @config['port'],
                                               EventMachine::ProxyServer::Connection, :debug => debug) do |conn|
-              server.em_run=true
-              server.run conn
+              self.em_run=true
+              self.run conn
             end
           end
         rescue Exception => e
