@@ -49,7 +49,6 @@ module ProxyServer
     attr_accessor :em_run
     attr_accessor :server_run
     attr_accessor :proxy
-    attr_accessor :record
     attr_accessor :testcase
     attr_accessor :testcases
     attr_accessor :info
@@ -66,9 +65,9 @@ module ProxyServer
       @raw_res=nil
       @@em_run=false
       @testcase=[]
-      @testcases=[]
-      @record=false
-      @record_mode=1
+      @testcase_service=[]
+      #@testcases=[]
+      @save_mode=1
       @info=''
 
     end
@@ -93,9 +92,9 @@ module ProxyServer
     end
 
 
-    def record_request(req)
+    def save_request(req)
       #录制模式为每个请求对应一个新用例，一个请求可以对应多个响应
-      if @record_mode==1 && @record
+      if @save_mode==1
         #保存之前的测试用例
         testcase_stop
         #清空数据，重新开始新的测试用例
@@ -104,29 +103,41 @@ module ProxyServer
       @testcase<<{:req => req.data}
     end
 
-    def record_response(res)
+    def save_response(res)
       #@testcase<<{:res => res.data}
       #使用更好的结构来保存数据
-      #:req=>xxx, :res=[xxx,xxxx]
-      @testcase[-1][:res]||=[]
+      #多次的响应被合并到:res
+      #:req=>xxx, :res=xxx
+      @testcase[-1][:res]||=''
       @testcase[-1][:res]<<res.data
     end
 
     #定义测试用例的开始标记
+    #用于用户在外部标记自己的测试用例范围
     def testcase_start
       @testcase=[]
       #先占位
-      @testcases<<@testcase
+      #暂时去掉这个功能，让外部用户来控制如何存储每个测试用例的数据
+      #@testcases<<@testcase
     end
 
     #测试用例执行完成的标记
     def testcase_stop
       #重新确定最终值
-      if @testcases!=[]
-        if @testcase!=[]
-          @testcases[-1]=@testcase.dup
-        end
+      @testcase_service.each do |s|
+        s.call(@testcase)
       end
+=begin
+if @testcases!=[]
+      if @testcase!=[]
+        @testcases[-1]=@testcase.dup
+      end
+      #end
+=end
+    end
+    def tc(&blk)
+      @testcase_service||=[]
+      @testcase_service<<blk
     end
 
     #用于回放请求，做客户端，使用em进行回放
@@ -137,8 +148,8 @@ module ProxyServer
       res=ProxyResponse.new
 
       #clear testcases for record new data
-      testcases_old=@testcases
-      @testcases=[]
+      #testcases_old=@testcases
+      #@testcases=[]
       @testcase=[]
       unbind=false
       begin
@@ -153,7 +164,6 @@ module ProxyServer
               req.data=tc[:req]
               encode_request(req)
               #client.send_data "GET / HTTP/1.1\r\nHost: www.sogou.com\r\n\r\n"
-              p req.raw
               client.send_data req.raw
             end
           end
@@ -205,7 +215,7 @@ module ProxyServer
       conn.on_data do |raw_req|
         @request.raw=raw_req
         self.decode_request(@request)
-        self.record_request(@request) if @record
+        self.save_request(@request)
         self.encode_request(@request)
         #must return the raw data
         @request.raw
@@ -215,7 +225,7 @@ module ProxyServer
         @response.raw=raw_res
         self.decode_response(@response)
         self.mock_process(@request, @response)
-        self.record_response(@response) if @record
+        self.save_response(@response)
         self.encode_response(@response)
 
         #此处如果用于多转发时，需要增加多转发时候的请求销毁，暂未用到，所以保持现状

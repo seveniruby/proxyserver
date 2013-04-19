@@ -11,17 +11,14 @@ module ProxyServer
       super
     end
     def post_init
-      p 'post_init'
       @on_init_service.each do |s|
         s.call
       end
       #send_data "GET / HTTP/1.1\r\nHost: www.sogou.com\r\n\r\n"
     end
     def connection_completed
-      p 'connect'
     end
     def unbind
-      p 'close connect'
       @on_close_service.each do |s|
         s.call
       end
