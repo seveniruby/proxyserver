@@ -33,10 +33,26 @@ if __FILE__==$0 || $0=='<script>'
     def test_gzip
       config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.baidu.com', "forward_port" => 80}
       server=ProxyServer::HttpProxy.new config
-      server.record=true
       server.start
       res=get('http://www.baidu.com/', '127.0.0.1', 8078)
       assert_equal "200", res.code
+      p server.testcase
+      server.stop
+
+
+      config={"host"=>'0.0.0.0','port'=>8078,'forward_host'=>'www.sogou.com',"forward_port"=>80}
+      server=ProxyServer::HttpProxy.new config
+      server.start
+      sleep 2
+      #代理方式sogou会返回gzip
+      res=get('http://www.sogou.com/web?query=xxx','127.0.0.1',8078)
+      assert_equal '200', res.code
+      server.stop
+      sleep 3
+
+
+
+
     end
 	end
 end

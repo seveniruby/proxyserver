@@ -184,6 +184,12 @@ if @testcases!=[]
 
     end
 
+    #用于自动生成测试用例的回放形式
+    def replay_testcase(testcase=nil)
+      testcase||=@testcase
+
+    end
+
     #提供用户机制干预结果。
     #可参考测试用例中的mock方法
     def mock_process(req, res)
@@ -262,6 +268,7 @@ if @testcases!=[]
           puts "ERROR__________________"
           puts e.message
           puts e.backtrace
+          raise
         end
       end
       sleep 2
@@ -286,11 +293,13 @@ if @testcases!=[]
     def stop
       puts "Terminating ProxyServer"
       #jruby's bug stop_server would be stop em.run
-      EventMachine.stop_server @proxy
+      EM.close_connection @proxy, true
+      EM.stop_server @proxy
       begin
         @thread.exit if @thread
       rescue
         raise
+
       end
       #EventMachine.stop_event_loop
       sleep 2
