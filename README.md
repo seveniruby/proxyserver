@@ -31,6 +31,9 @@ replay的思想是loadrunner的模式，希望可以把接口测试做的更彻�
 
 做一套接口测试框架，也是我在阿里，百度时一个未了的心愿。在此实现它，我也会持续改进
 
+## 同类型的产品
+1. wiremock https://github.com/tomakehurst/wiremock
+
 ## Installation
 
 Add this line to your application's Gemfile:

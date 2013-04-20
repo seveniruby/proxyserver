@@ -67,8 +67,9 @@ module ProxyServer
       @testcase=[]
       @testcase_service=[]
       #@testcases=[]
-      @save_mode=1
+      @testcase_mode=1
       @info=''
+      @testcase_start_tag=false
 
     end
 
@@ -94,10 +95,9 @@ module ProxyServer
 
     def save_request(req)
       #录制模式为每个请求对应一个新用例，一个请求可以对应多个响应
-      if @save_mode==1
-        #保存之前的测试用例
-        testcase_stop
+      if @testcase_mode==1
         #清空数据，重新开始新的测试用例
+        testcase_stop
         testcase_start
       end
       @testcase<<{:req => req.data}
@@ -124,6 +124,7 @@ module ProxyServer
     #测试用例执行完成的标记
     def testcase_stop
       #重新确定最终值
+      return if @testcase==[]
       @testcase_service.each do |s|
         s.call(@testcase)
       end

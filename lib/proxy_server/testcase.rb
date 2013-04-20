@@ -1,4 +1,7 @@
 require 'test/unit'
+require "minitest/reporters"
+MiniTest::Reporters.use!
+
 class TestReplay < Test::Unit::TestCase
   def self.add_testcase(m, &block)
     m="test_#{m}"
@@ -7,5 +10,9 @@ class TestReplay < Test::Unit::TestCase
 
   def self.add_class(x)
     Object.const_set(x, Class.new(TestReplay))
+  end
+  #主动运行测试用例，不依赖自动执行
+  def self.run
+    Test::Unit::Runner.new.run()
   end
 end

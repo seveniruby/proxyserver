@@ -111,9 +111,9 @@ if __FILE__==$0 || $0=='<script>'
         #替换响应的内容
         #jruby下会有异常，是这段代码导致的，以后需要增加线程安全锁, cruby不会有异常提示
         #lock.synchronize do
-          res.data=res.data.gsub('seveniruby', 'rubyiseven')
-          #p res.data.index('seveniruby')
-          #p res.data.index('rubyiseven')
+        res.data=res.data.gsub('seveniruby', 'rubyiseven')
+        #p res.data.index('seveniruby')
+        #p res.data.index('rubyiseven')
         #end
       end
       server.start
@@ -171,6 +171,7 @@ if __FILE__==$0 || $0=='<script>'
       assert_equal '200', res.code
       res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'systemtap -english')
       assert_equal '200', res.code
+      server.testcase_stop
       assert_equal 3, testcases.count
     end
 
@@ -223,7 +224,90 @@ if __FILE__==$0 || $0=='<script>'
       assert_equal '200', res.code
       assert_equal 10, server.testcase[0][:res].gsub('class="pt"').count
     end
+
+    def test_testcase
+      config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
+      server=ProxyServer::ProxyServer.new config
+      testcases=[]
+      server.tc do |testcase|
+        testcases<<testcase
+      end
+      server.start()
+      uri = URI('http://127.0.0.1:8078/web')
+      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
+      assert_equal '200', res.code
+      res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'valgrind -english')
+      assert_equal '200', res.code
+      res = Net::HTTP.post_form(uri, 'q' => 'seveniruby', 'query' => 'seveniruby -english')
+      assert_equal '200', res.code
+      server.testcase_stop
+      p testcases
+      assert_equal 3, testcases.count
+
+      testcases.each do |expect|
+        testcase=server.replay_request(expect)
+        #返回的首页结果应该都是10
+        expect_count=expect[0][:res].gsub('class="pt"').count
+        res_count=testcase[0][:res].gsub('class="pt"').count
+        #结果应该不同，因为有动态内容
+        assert_not_equal expect, testcase
+        assert_equal expect_count, res_count
+      end
+
+      TestReplay.add_class("TestXXX")
+      index=0
+      testcases.each do |expect|
+        TestReplay.add_testcase(index) do
+          testcase=server.replay_request(expect)
+          #返回的首页结果应该都是10
+          expect_count=expect[0][:res].gsub('class="pt"').count
+          res_count=testcase[0][:res].gsub('class="pt"').count
+          #结果应该不同，因为有动态内容
+          assert_not_equal expect, testcase
+          assert_equal expect_count, res_count
+        end
+      end
+
+
+    end
+
+    def test_add_testcase
+      config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
+      server=ProxyServer::ProxyServer.new config
+      testcases=[]
+      server.tc do |testcase|
+        testcases<<testcase
+      end
+      server.start()
+      uri = URI('http://127.0.0.1:8078/web')
+      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
+      assert_equal '200', res.code
+      res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'valgrind -english')
+      assert_equal '200', res.code
+      res = Net::HTTP.post_form(uri, 'q' => 'seveniruby', 'query' => 'seveniruby -english')
+      assert_equal '200', res.code
+      server.testcase_stop
+      p testcases
+      assert_equal 3, testcases.count
+
+      index=0
+      testcases.each do |expect|
+        TestReplay.add_testcase(index) do
+          testcase=server.replay_request(expect)
+          #返回的首页结果应该都是10
+          expect_count=expect[0][:res].gsub('class="pt"').count
+          res_count=testcase[0][:res].gsub('class="pt"').count
+          #结果应该不同，因为有动态内容
+          assert_not_equal expect, testcase
+          assert_equal expect_count, res_count
+        end
+      end
+      #can't run testcase in testcase, you can see the test_testcase.rb for example
+      #TestReplay.run
+
+    end
   end
+
 
 end
 
