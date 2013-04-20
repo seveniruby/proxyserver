@@ -64,72 +64,18 @@ if __FILE__==$0 || $0=='<script>'
       server2.stop
     end
 
-    #can't work in jruby, would be block on the start_server
-    def ttest_start_in_em
-      host1='www.baidu.com'
-      config1={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => host1, "forward_port" => 80}
-      server1=ProxyServer::ProxyServer.new config1
-
-      host2='www.sogou.com'
-      config2={"host" => '0.0.0.0', 'port' => 8079, 'forward_host' => host2, "forward_port" => 80}
-      server2=ProxyServer::ProxyServer.new config2
-
-      Thread.new do
-        EM.run do
-          server1.start_in_em(true)
-          server2.start_in_em(true)
+    def test_restart
+      4.times do |i|
+        host1='www.sogou.com'
+        config1={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => host1, "forward_port" => 80}
+        server1=ProxyServer::ProxyServer.new config1
+        server1.start(:debug => true)
+        5.times do |j|
+          res=get("http://#{host1}/", '127.0.0.1', 8078)
+          assert_equal "200", res.code
         end
+        server1.stop
       end
-=begin
-      Thread.new do
-        EM.run do
-          server1.start
-        end
-      end
-
-      Thread.new do
-        EM.run do
-          server2.start
-        end
-      end
-=end
-=begin
-      server1.start
-      server2.start
-=end
-=begin
-      Thread.new do
-        EM.run do
-          server1.proxy=EventMachine::start_server(config1['host'], config1['port'],
-                                                   EventMachine::ProxyServer::Connection, :debug => false) do |conn|
-            server1.em_run=true
-            server1.run conn
-          end
-        end
-      end
-      Thread.new do
-        EM.run do
-          server2.proxy=EventMachine::start_server(config2['host'], config2['port'],
-                                                   EventMachine::ProxyServer::Connection, :debug => false) do |conn|
-            server2.em_run=true
-            server2.run conn
-          end
-
-        end
-      end
-=end
-
-      res=get("http://#{host1}/", '127.0.0.1', 8078)
-      assert_equal "200", res.code
-      res=get("http://#{host1}/", '127.0.0.1', 8078)
-      assert_equal "200", res.code
-      server1.stop
-
-      res=get("http://#{host2}/", '127.0.0.1', 8079)
-      assert_equal "200", res.code
-
-
-      server2.stop
     end
 
     def test_mock
@@ -156,13 +102,19 @@ if __FILE__==$0 || $0=='<script>'
       server.stop
     end
 
+    #jruby下会有异常，可能是并发引起的ClosedChannelException。但是不影响用例执行
     def test_post_mock
       config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
       server=ProxyServer::ProxyServer.new config
+      lock=Mutex.new
       server.mock do |req, res|
         #替换响应的内容
         #jruby下会有异常，是这段代码导致的，以后需要增加线程安全锁, cruby不会有异常提示
-        res.data.gsub!('seveniruby', 'rubyiseven')
+        #lock.synchronize do
+          res.data=res.data.gsub('seveniruby', 'rubyiseven')
+          #p res.data.index('seveniruby')
+          #p res.data.index('rubyiseven')
+        #end
       end
       server.start
       sleep 3

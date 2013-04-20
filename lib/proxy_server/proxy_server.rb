@@ -135,6 +135,7 @@ if @testcases!=[]
       #end
 =end
     end
+
     def tc(&blk)
       @testcase_service||=[]
       @testcase_service<<blk
@@ -244,65 +245,74 @@ if @testcases!=[]
         # terminate connection (in duplex mode, you can terminate when prod is done)
         # unbind if backend == :srv
       end
-
-
     end
 
-    def start(debug=false)
-      status=true
-      #在后台启动，防止block进程
-
-      Thread.new do
-        begin
-          EM.run do
-            @proxy=EventMachine::start_server(@config['host'], @config['port'],
-                                              EventMachine::ProxyServer::Connection, :debug => debug) do |conn|
-              self.em_run=true
-              self.run conn
+    def start(options={})
+      begin
+        boot=false
+        if  !EM.reactor_thread
+          p 'start EM'
+          Thread.new do
+            begin
+              EM.run do
+                EM.add_timer(1) do
+                  boot=true
+                end
+                #jruby's bug jruby和cruby下的eventmachine存在行为不一致。在jruby下需要增加这个定时器才能让em不阻塞
+                EM.add_periodic_timer(2) do
+                end
+              end
+            rescue Exception => e
+              if e.inspect.index('CancelledKeyException')
+                #jruby下的不重要的异常，可以忽略
+              else
+                puts "ERROR______________"
+                puts e.message
+                puts e.inspect
+                @info=e.message
+                puts e.backtrace
+                raise
+              end
             end
           end
-
-        rescue Exception => e
-          @info=e.message
-          status=false
-          puts "ERROR__________________"
-          puts e.message
-          puts e.backtrace
-          raise
+          while !boot
+            sleep 1
+          end
         end
-      end
-      sleep 2
-      if status
-        @info="#{self} server start on port #{@config['port']}"
-      end
-      puts @info
-    end
 
-    #用于在EM.run中，这样可以启动多个server，将来可以考虑与start方法合并
-    #can't work in jruby
-    def start_in_em(debug=false)
-      server=self
-      @proxy=EventMachine::start_server(@config['host'], @config['port'],
-                                        EventMachine::ProxyServer::Connection, :debug => debug) do |conn|
-        server.run conn
-        server.em_run=true
+        boot=false
+        EM.add_timer(1) do
+          p 'Start Server'
+          @proxy=EM::start_server(@config['host'], @config['port'],
+                                  EventMachine::ProxyServer::Connection, options) do |conn|
+            self.em_run=true
+            self.run conn
+          end
+          boot=true
+        end
+        while !boot
+          sleep 1
+        end
+        @info="#{self} server start on port #{@config['port']}"
+        puts @info
+      rescue Exception => e
+        puts "ERROR___________________"
+        puts e.message
+        @info=e.message
+        puts e.backtrace
+        raise
       end
     end
 
     #停止服务运行
     def stop
-      puts "Terminating ProxyServer"
+      @info="Terminating ProxyServer"
       #jruby's bug stop_server would be stop em.run
       EM.close_connection @proxy, true
+      sleep 1
       EM.stop_server @proxy
-      begin
-        @thread.exit if @thread
-      rescue
-        raise
-
-      end
       #EventMachine.stop_event_loop
-      sleep 2
+      puts @info
     end
 
     #保持服务运行
