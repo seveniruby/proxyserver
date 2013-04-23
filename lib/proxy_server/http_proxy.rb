@@ -121,7 +121,13 @@ module ProxyServer
 
       end
 =end
+=begin
+      @http_res.on_headers_complete = proc do
+        #p http.headers
+        :stop
+      end
       @http_res<< res.raw
+=end
 =begin
       if @http_res.headers['Content-Length'].to_i==@raw_total.split("\r\n\r\n")[1..-1].join.size
         p 'xxx'

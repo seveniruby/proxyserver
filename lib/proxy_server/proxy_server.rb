@@ -95,7 +95,7 @@ module ProxyServer
 
     def save_request(req)
       #录制模式为每个请求对应一个新用例，一个请求可以对应多个响应
-      if @testcase_mode==1
+      if @testcase_mode==1 && @testcase_start_tag==false
         #清空数据，重新开始新的测试用例
         testcase_stop
         testcase_start
@@ -116,6 +116,7 @@ module ProxyServer
     #用于用户在外部标记自己的测试用例范围
     def testcase_start
       @testcase=[]
+      @testcase_start_tag=true
       #先占位
       #暂时去掉这个功能，让外部用户来控制如何存储每个测试用例的数据
       #@testcases<<@testcase
@@ -123,6 +124,7 @@ module ProxyServer
 
     #测试用例执行完成的标记
     def testcase_stop
+      @testcase_start_tag=false
       #重新确定最终值
       return if @testcase==[]
       @testcase_service.each do |s|
@@ -249,6 +251,9 @@ if @testcases!=[]
     end
 
     def start(options={})
+      if @proxy
+        stop
+      end
       begin
         boot=false
         if  !EM.reactor_thread
@@ -313,6 +318,7 @@ if @testcases!=[]
       sleep 1
       EM.stop_server @proxy
       #EventMachine.stop_event_loop
+      @proxy=nil
       puts @info
     end
 

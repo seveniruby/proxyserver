@@ -13,8 +13,6 @@ if __FILE__==$0 || $0=='<script>'
     end
 
     def test_http
-      #require 'tracer'
-      #Tracer.on
       config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
       server=ProxyServer::ProxyServer.new config
       server.start
@@ -106,15 +104,8 @@ if __FILE__==$0 || $0=='<script>'
     def test_post_mock
       config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
       server=ProxyServer::ProxyServer.new config
-      lock=Mutex.new
       server.mock do |req, res|
-        #替换响应的内容
-        #jruby下会有异常，是这段代码导致的，以后需要增加线程安全锁, cruby不会有异常提示
-        #lock.synchronize do
         res.data=res.data.gsub('seveniruby', 'rubyiseven')
-        #p res.data.index('seveniruby')
-        #p res.data.index('rubyiseven')
-        #end
       end
       server.start
       sleep 3
@@ -291,8 +282,12 @@ if __FILE__==$0 || $0=='<script>'
       assert_equal 3, testcases.count
 
       index=0
+
+      #增加测试用例集
+      TestReplay.add_class("TestCount")
       testcases.each do |expect|
-        TestReplay.add_testcase(index) do
+        #增加测试集中的测试用例
+        TestCount.add_testcase(index) do
           testcase=server.replay_request(expect)
           #返回的首页结果应该都是10
           expect_count=expect[0][:res].gsub('class="pt"').count
@@ -304,6 +299,63 @@ if __FILE__==$0 || $0=='<script>'
       end
       #can't run testcase in testcase, you can see the test_testcase.rb for example
       #TestReplay.run
+
+    end
+
+    def test_start_after_start
+      config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
+      server=ProxyServer::ProxyServer.new config
+      server.start
+      uri = URI('http://127.0.0.1:8078/web')
+      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
+      assert_equal '200', res.code
+
+
+      server.start
+      uri = URI('http://127.0.0.1:8078/web')
+      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
+      assert_equal '200', res.code
+
+
+    end
+
+    def start_sogou
+      config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
+      server=ProxyServer::ProxyServer.new config
+      server.start
+      server
+    end
+
+    def test_testcase_start
+      server=start_sogou
+      testcases=[]
+      server.tc do |testcase|
+        testcases<< testcase
+      end
+      server.testcase_start
+      uri = URI('http://127.0.0.1:8078/web')
+      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
+      assert_equal '200', res.code
+
+      uri = URI('http://127.0.0.1:8078/web')
+      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
+      assert_equal '200', res.code
+      server.testcase_stop
+      assert_equal 1, testcases.count
+      assert_equal 2, server.testcase.count
+      server.stop
+
+      testcases=[]
+      server.start
+      uri = URI('http://127.0.0.1:8078/web')
+      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
+      assert_equal '200', res.code
+      uri = URI('http://127.0.0.1:8078/web')
+      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
+      assert_equal '200', res.code
+      server.stop
+      assert_equal 1, testcases.count
+
 
     end
   end

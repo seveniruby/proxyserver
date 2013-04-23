@@ -14,18 +14,21 @@ if __FILE__==$0 || $0=='<script>'
 			@port=8081
 		end
 		def test_http
-			http=Proxys.new 'protocol'=>'http', 'forward_host'=>'www.baidu.com', 'forward_port'=>80, 'port'=>@port, 'host'=>'127.0.0.1'
+			http=Proxys.new 'protocol'=>'http', 'forward_host'=>'www.baidu.com',
+                      'forward_port'=>80, 'port'=>@port, 'host'=>'127.0.0.1'
 			http.start
 			get 'http://www.baidu.com/','127.0.0.1',@port
     end
     def test_tcp
-      http=Proxys.new 'protocol'=>'tcp', 'forward_host'=>'www.baidu.com', 'forward_port'=>80, 'port'=>@port, 'host'=>'127.0.0.1'
+      http=Proxys.new 'protocol'=>'tcp', 'forward_host'=>'www.baidu.com',
+                      'forward_port'=>80, 'port'=>@port, 'host'=>'127.0.0.1'
       http.start
       get 'http://www.baidu.com/','127.0.0.1',@port
     end
 
 		def test_form
-			http=Proxys.new 'protocol'=>'form', 'forward_host'=>'www.sogou.com', 'forward_port'=>80, 'port'=>@port, 'host'=>'127.0.0.1'
+			http=Proxys.new 'protocol'=>'form', 'forward_host'=>'www.sogou.com',
+                      'forward_port'=>80, 'port'=>@port, 'host'=>'127.0.0.1'
 			http.start
 			p 'no query'
 			get "http://127.0.0.1:#{@port}"
