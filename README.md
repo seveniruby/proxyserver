@@ -1,9 +1,12 @@
 # Proxyserver
 * [![Build Status](https://travis-ci.org/seveniruby/proxyserver.png?branch=master)](http://travis-ci.org/seveniruby/proxyserver)
 
+## 项目进展
+目前在改进中，功能还没全部完成，尚未发布，请不要下载代码，以防浪费时间
+
 ## replay的目标
 
-1. 流量录制与重放
+1. 流量录制、转发，复制和重放
 2. 流量转化为测试用例
 3. 可以根据录制数据自动进行mock
 4. 支持协议扩展，从而应用于其他的网络协议甚至是文件句柄
@@ -32,6 +35,12 @@ replay的思想是loadrunner的模式，希望可以把接口测试做的更彻�
 
 做一套接口测试框架，也是我在阿里，百度时一个未了的心愿。在此实现它，我也会持续改进
 
+
+## 项目中的基础设计概念
+
+Cache 一种基于tcp协议的数据缓存器，类似于memcache，可以用来替代mysql,redis以及其他依赖的数据源，用于回放的解依赖
+Proxy 代理器，用于请求的转发，复制，录制和回放
+Client 协议的驱动器
 
 
 ## 同类型的产品
