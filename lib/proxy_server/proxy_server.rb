@@ -297,6 +297,7 @@ if @testcases!=[]
 
       p 'Start Server'
       boot=false
+      require 'tracer'
       begin
         EM.add_timer(1) do
           begin
