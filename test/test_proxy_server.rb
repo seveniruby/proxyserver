@@ -26,17 +26,16 @@ if __FILE__==$0 || $0=='<script>'
     end
 
     def test_start
+      require 'tracer'
       config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
-      server=ProxyServer::ProxyServer.new config
-      server.start
-
-
-      server.info='xxx'
-      config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
+      server_1 = ProxyServer::ProxyServer.new config
+      server_1.start
+      #server_1.stop
+      p 'start same server on same port'
       server=ProxyServer::ProxyServer.new config
       server.start
       assert_equal "unable to open socket acceptor: java.net.BindException: Address already in use: bind", server.info
-
+      server_1.stop
     end
 
     def test_two_server
@@ -67,11 +66,13 @@ if __FILE__==$0 || $0=='<script>'
         host1='www.sogou.com'
         config1={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => host1, "forward_port" => 80}
         server1=ProxyServer::ProxyServer.new config1
-        server1.start(:debug => true)
+        server1.start()
         5.times do |j|
           res=get("http://#{host1}/", '127.0.0.1', 8078)
           assert_equal "200", res.code
         end
+        require 'tracer'
+        #Tracer.on
         server1.stop
       end
     end
@@ -125,7 +126,6 @@ if __FILE__==$0 || $0=='<script>'
       res=open('http://127.0.0.1:8078/')
       assert_equal 'stub', res.read
       server.stop
-      p "server2 stop"
     end
 
     def test_mock_listen
@@ -138,7 +138,6 @@ if __FILE__==$0 || $0=='<script>'
       res=get('http://127.0.0.1:8078/')
       assert_equal 'xxxx', res.body
       server.stop
-      p "server2 stop"
 
     end
 
@@ -164,6 +163,7 @@ if __FILE__==$0 || $0=='<script>'
       assert_equal '200', res.code
       server.testcase_stop
       assert_equal 3, testcases.count
+      server.stop
     end
 
 
@@ -196,6 +196,7 @@ if __FILE__==$0 || $0=='<script>'
       testcase=server.replay_request
       #同样的查询得到的动态页面也是不一样，这个必须是fail
       assert_not_equal expect[0][:res], testcase[0][:res]
+      server.stop
     end
 
     def test_multi_response
@@ -214,6 +215,7 @@ if __FILE__==$0 || $0=='<script>'
       res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'systemtap -english')
       assert_equal '200', res.code
       assert_equal 10, server.testcase[0][:res].gsub('class="pt"').count
+      server.stop
     end
 
     def test_testcase
@@ -258,6 +260,7 @@ if __FILE__==$0 || $0=='<script>'
           assert_equal expect_count, res_count
         end
       end
+      server.stop
 
 
     end
@@ -297,6 +300,7 @@ if __FILE__==$0 || $0=='<script>'
           assert_equal expect_count, res_count
         end
       end
+      server.stop
       #can't run testcase in testcase, you can see the test_testcase.rb for example
       #TestReplay.run
 
@@ -316,6 +320,7 @@ if __FILE__==$0 || $0=='<script>'
       res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
       assert_equal '200', res.code
 
+      server.stop
 
     end
 
@@ -357,6 +362,10 @@ if __FILE__==$0 || $0=='<script>'
       assert_equal 1, testcases.count
 
 
+    end
+
+    def setup
+      sleep 3
     end
   end
 

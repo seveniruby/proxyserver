@@ -99,6 +99,7 @@ module ProxyServer
         #清空数据，重新开始新的测试用例
         testcase_stop
         testcase_start
+        @testcase_start_tag=false
       end
       @testcase<<{:req => req.data}
     end
@@ -250,73 +251,103 @@ if @testcases!=[]
       end
     end
 
+    #jruby+thread+timer导致异常捕获困难，所以写了很多的异常捕获
     def start(options={})
-      if @proxy
-        stop
-      end
-      begin
-        boot=false
-        if  !EM.reactor_thread
-          p 'start EM'
-          Thread.new do
+      boot=false
+      if  !EM.reactor_thread
+        p 'start EM'
+        begin
+          @thread=Thread.new do
             begin
               EM.run do
-                EM.add_timer(1) do
-                  boot=true
-                end
+                EM.add_timer(1) { boot=true }
                 #jruby's bug jruby和cruby下的eventmachine存在行为不一致。在jruby下需要增加这个定时器才能让em不阻塞
-                EM.add_periodic_timer(2) do
-                end
+                EM.add_periodic_timer(1) {}
               end
             rescue Exception => e
-              if e.inspect.index('CancelledKeyException')
-                #jruby下的不重要的异常，可以忽略
+              if e.inspect.index('CancelledKeyException')!=nil || e.inspect.index('ClosedChannelException')!=nil
               else
-                puts "ERROR______________"
+                puts "ERROR_EM_RUN______________"
                 puts e.message
                 puts e.inspect
+                p @info
                 @info=e.message
-                puts e.backtrace
+                boot=nil
                 raise
               end
             end
-          end
-          while !boot
-            sleep 1
-          end
-        end
 
-        boot=false
-        EM.add_timer(1) do
-          p 'Start Server'
-          @proxy=EM::start_server(@config['host'], @config['port'],
-                                  EventMachine::ProxyServer::Connection, options) do |conn|
-            self.em_run=true
-            self.run conn
           end
-          boot=true
+        rescue Exception => e
+          if e.inspect.index('CancelledKeyException')!=nil || e.inspect.index('ClosedChannelException')!=nil
+          else
+            puts "ERROR_THREAD______________"
+            puts e.message
+            puts e.inspect
+            @info=e.message
+            puts e.backtrace
+            boot=nil
+            #raise
+          end
         end
-        while !boot
+        while boot==false
           sleep 1
         end
-        @info="#{self} server start on port #{@config['port']}"
-        puts @info
-      rescue Exception => e
-        puts "ERROR___________________"
-        puts e.message
-        @info=e.message
-        puts e.backtrace
-        raise
       end
+
+      p 'Start Server'
+      boot=false
+      begin
+        EM.add_timer(1) do
+          begin
+            @proxy=EM::start_server(@config['host'], @config['port'],
+                                    EM::ProxyServer::Connection, options) do |conn|
+              self.em_run=true
+              self.run conn
+            end
+            boot=true
+          rescue Exception => e
+            if e.inspect.index('CancelledKeyException')!=nil || e.inspect.index('ClosedChannelException')!=nil
+            else
+              puts "ERROR_Start_Server______________"
+              puts e.message
+              puts e.inspect
+              @info=e.message
+              boot=nil
+              #raise
+            end
+          end
+
+        end
+      rescue Exception => e
+        if e.inspect.index('CancelledKeyException')!=nil || e.inspect.index('ClosedChannelException')!=nil
+        else
+          puts "ERROR_EM_ADDTIMER______________"
+          puts e.message
+          puts e.inspect
+          @info=e.message
+          boot=nil
+          #raise
+        end
+      end
+
+      sleep 2
+      while boot==false
+        sleep 1
+      end
+      if boot==true
+        @info="#{self} server start on port #{@config['port']}"
+      end
+      puts @info
     end
 
     #停止服务运行
     def stop
       @info="Terminating ProxyServer"
       #jruby's bug stop_server would be stop em.run
-      EM.close_connection @proxy, true
-      sleep 1
-      EM.stop_server @proxy
+      EM.close_connection @proxy, true if @proxy
+      EM.stop_server @proxy if @proxy
+      #@thread.kill if @thread
       #EventMachine.stop_event_loop
       @proxy=nil
       puts @info
