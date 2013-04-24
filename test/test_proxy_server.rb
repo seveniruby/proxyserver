@@ -363,12 +363,8 @@ if __FILE__==$0 || $0=='<script>'
 
     end
 
-    def setup
-      sleep 1
-    end
-
     def teardown
-      EM.stop
+      EM.stop if EM.reactor_thread
     end
   end
 
