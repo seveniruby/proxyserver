@@ -109,12 +109,14 @@ if __FILE__==$0 || $0=='<script>'
         res.data=res.data.gsub('seveniruby', 'rubyiseven')
       end
       server.start
-      sleep 3
       uri = URI('http://127.0.0.1:8078/web')
       res=Net::HTTP.post_form(uri, 'q' => 'seveniruby', 'query' => 'seveniruby -english')
-      assert_equal nil, res.body.index('seveniruby')
       #判断是否出现在响应中
-      assert_equal true, res.body.index('rubyiseven')>20
+      assert_equal "200", res.code
+      assert_equal true, res.body.gsub('rubyiseven').count>10
+      p res.body
+      #因为分包策略，关键词有可能被隔断，所以不可能完全替换，除非用httpproxy
+      assert_equal true, res.body.gsub('seveniruby').count<10
       server.stop
     end
 

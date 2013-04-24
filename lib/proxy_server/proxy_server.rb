@@ -344,9 +344,22 @@ if @testcases!=[]
     #停止服务运行
     def stop
       @info="Terminating ProxyServer"
-      #jruby's bug stop_server would be stop em.run
-      EM.close_connection @proxy, true if @proxy
-      EM.stop_server @proxy if @proxy
+      begin
+
+        #jruby's bug stop_server would be stop em.run
+        EM.close_connection @proxy, true if @proxy
+        EM.stop_server @proxy if @proxy
+      rescue Exception => e
+        if e.inspect.index('CancelledKeyException')!=nil || e.inspect.index('ClosedChannelException')!=nil
+        else
+          puts "ERROR_STOP______________"
+          puts e.message
+          puts e.inspect
+          @info=e.message
+          boot=nil
+          #raise
+        end
+      end
       #@thread.kill if @thread
       #EventMachine.stop_event_loop
       @proxy=nil
