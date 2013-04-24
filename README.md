@@ -38,9 +38,9 @@ replay的思想是loadrunner的模式，希望可以把接口测试做的更彻�
 
 ## 项目中的基础设计概念
 
-Cache 一种基于tcp协议的数据缓存器，类似于memcache，可以用来替代mysql,redis以及其他依赖的数据源，用于回放的解依赖
-Proxy 代理器，用于请求的转发，复制，录制和回放
-Client 协议的驱动器
+1. Cache 一种基于tcp协议的数据缓存器，类似于memcache，可以用来替代mysql,redis以及其他依赖的数据源，用于回放的解依赖
+2. Proxy 代理器，用于请求的转发，复制，录制和回放
+3. Client 协议的驱动器
 
 
 ## 同类型的产品
