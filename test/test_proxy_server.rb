@@ -114,7 +114,6 @@ if __FILE__==$0 || $0=='<script>'
       #判断是否出现在响应中
       assert_equal "200", res.code
       assert_equal true, res.body.gsub('rubyiseven').count>10
-      p res.body
       #因为分包策略，关键词有可能被隔断，所以不可能完全替换，除非用httpproxy
       assert_equal true, res.body.gsub('seveniruby').count<10
       server.stop
@@ -236,7 +235,6 @@ if __FILE__==$0 || $0=='<script>'
       res = Net::HTTP.post_form(uri, 'q' => 'seveniruby', 'query' => 'seveniruby -english')
       assert_equal '200', res.code
       server.testcase_stop
-      p testcases
       assert_equal 3, testcases.count
 
       testcases.each do |expect|
@@ -283,7 +281,6 @@ if __FILE__==$0 || $0=='<script>'
       res = Net::HTTP.post_form(uri, 'q' => 'seveniruby', 'query' => 'seveniruby -english')
       assert_equal '200', res.code
       server.testcase_stop
-      p testcases
       assert_equal 3, testcases.count
 
       index=0
@@ -367,7 +364,7 @@ if __FILE__==$0 || $0=='<script>'
     end
 
     def setup
-      sleep 3
+      sleep 1
     end
   end
 
