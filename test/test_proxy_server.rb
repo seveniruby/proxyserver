@@ -270,7 +270,6 @@ if __FILE__==$0 || $0=='<script>'
       res = Net::HTTP.post_form(uri, 'q' => 'seveniruby', 'query' => 'seveniruby -english')
       assert_equal '200', res.code
       server.testcase_stop
-      p testcases
       assert_equal 3, testcases.count
       server.stop
 
@@ -349,7 +348,6 @@ if __FILE__==$0 || $0=='<script>'
       res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
       assert_equal '200', res.code
       server.stop
-      p testcases.count
       assert_equal 2, testcases.count
     end
 
