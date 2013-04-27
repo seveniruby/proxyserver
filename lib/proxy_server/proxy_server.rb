@@ -192,18 +192,12 @@ if @testcases!=[]
           index=0
           #in windows, connect 0.0.0.0 would fail , windows only understand  127.0.0.1
           EM.connect '127.0.0.1', @config['port'], ProxyClient do |client|
-            client.on_res do
-              unbind=true
-            end
             testcase.each do |tc|
               req.data=tc[:req]
               encode_request(req)
               #client.send_data "GET / HTTP/1.1\r\nHost: www.sogou.com\r\n\r\n"
               client.send_data req.raw
             end
-          end
-          while !unbind
-            sleep 2
           end
         end
       rescue Exception => e

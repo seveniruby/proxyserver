@@ -214,7 +214,20 @@ if __FILE__==$0 || $0=='<script>'
 
       testcases.each do |expect|
         testcase=server.replay_request(expect)
-        p testcase
+        #http的响应较慢，需要等待。目前在proxyserver这一层是不能判断http是否返回完全，需要在更高http level上判断返回
+        while true do
+          if testcase[-1]
+            if testcase[-1][:res]
+              tag=testcase[-1][:res][-4..-1]
+              p tag
+              if tag=="\r\n\r\n"
+                p 'break'
+                break
+              end
+            end
+          end
+          sleep 1
+        end
         #返回的首页结果应该都是10
         expect_count=expect[0][:res].gsub('class="pt"').count
         res_count=testcase[0][:res].gsub('class="pt"').count
