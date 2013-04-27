@@ -6,6 +6,7 @@ require 'webrick'
 
 #还没有完工，还没有选择好使用哪个http的解析器，考虑用em-http-request重写整个http的proxy
 #目前先用简单的http parser代替着用，因为proxy接管了网络交互，所以比较难判断http的response到底何时结束
+#http是个特殊的协议，他的请求和响应是都可以分包的，跟单次请求，单次响应的场景不一样
 #带有明显的Conteng-Length是确定的，但是对于chunked，就很难判断结束标记了。这块属于http解析，不应该交给框架腐恶
 #后续通过em-http-request来解析
 #可能需要深入em中hack代码才行，我很好奇em-http-request是如何做的

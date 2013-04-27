@@ -29,7 +29,7 @@ def test_server
   config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
   server=ProxyServer::ProxyServer.new config
   testcases=[]
-  server.tc do |testcase|
+  server.testcase_callback do |testcase|
     testcases<<testcase
   end
   server.start()

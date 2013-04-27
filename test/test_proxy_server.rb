@@ -140,18 +140,11 @@ if __FILE__==$0 || $0=='<script>'
       server=ProxyServer::ProxyServer.new config
 
       testcases=[]
-      server.tc do |testcase|
+      server.testcase_callback do |testcase|
         testcases<<testcase
       end
       server.start
-      uri = URI('http://127.0.0.1:8078/web')
-      res = Net::HTTP.post_form(uri, 'q' => 'ruby', 'query' => 'ruby -english')
-      assert_equal '200', res.code
-      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
-      assert_equal '200', res.code
-      res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'systemtap -english')
-      assert_equal '200', res.code
-      server.testcase_stop
+      query(server)
       assert_equal 3, testcases.count
       server.stop
     end
@@ -212,18 +205,11 @@ if __FILE__==$0 || $0=='<script>'
       config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
       server=ProxyServer::ProxyServer.new config
       testcases=[]
-      server.tc do |testcase|
+      server.testcase_callback do |testcase|
         testcases<<testcase
       end
       server.start()
-      uri = URI('http://127.0.0.1:8078/web')
-      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
-      assert_equal '200', res.code
-      res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'valgrind -english')
-      assert_equal '200', res.code
-      res = Net::HTTP.post_form(uri, 'q' => 'seveniruby', 'query' => 'seveniruby -english')
-      assert_equal '200', res.code
-      server.testcase_stop
+      query(server)
       assert_equal 3, testcases.count
 
       testcases.each do |expect|
@@ -254,22 +240,34 @@ if __FILE__==$0 || $0=='<script>'
 =end
     end
 
+    def query(server)
+      uri = URI('http://127.0.0.1:8078/web')
+      server.testcase_start
+      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
+      assert_equal '200', res.code
+      server.testcase_stop
+
+      server.testcase_start
+      res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'valgrind -english')
+      assert_equal '200', res.code
+      server.testcase_stop
+
+      server.testcase_start
+      res = Net::HTTP.post_form(uri, 'q' => 'seveniruby', 'query' => 'seveniruby -english')
+      assert_equal '200', res.code
+      server.testcase_stop
+
+    end
+
     def test_add_testcase
       config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
       server=ProxyServer::ProxyServer.new config
       testcases=[]
-      server.tc do |testcase|
+      server.testcase_callback do |testcase|
         testcases<<testcase
       end
       server.start()
-      uri = URI('http://127.0.0.1:8078/web')
-      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
-      assert_equal '200', res.code
-      res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'valgrind -english')
-      assert_equal '200', res.code
-      res = Net::HTTP.post_form(uri, 'q' => 'seveniruby', 'query' => 'seveniruby -english')
-      assert_equal '200', res.code
-      server.testcase_stop
+      query(server)
       assert_equal 3, testcases.count
       server.stop
 
@@ -302,13 +300,10 @@ if __FILE__==$0 || $0=='<script>'
       uri = URI('http://127.0.0.1:8078/web')
       res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
       assert_equal '200', res.code
-
-
       server.start
       uri = URI('http://127.0.0.1:8078/web')
       res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
       assert_equal '200', res.code
-
       server.stop
 
     end
@@ -323,7 +318,7 @@ if __FILE__==$0 || $0=='<script>'
     def test_testcase_start
       server=start_sogou
       testcases=[]
-      server.tc do |testcase|
+      server.testcase_callback do |testcase|
         testcases<< testcase
       end
       server.testcase_start
@@ -341,14 +336,9 @@ if __FILE__==$0 || $0=='<script>'
 
       testcases=[]
       server.start
-      uri = URI('http://127.0.0.1:8078/web')
-      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
-      assert_equal '200', res.code
-      uri = URI('http://127.0.0.1:8078/web')
-      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
-      assert_equal '200', res.code
+      query(server)
       server.stop
-      assert_equal 2, testcases.count
+      assert_equal 3, testcases.count
     end
 
     def teardown

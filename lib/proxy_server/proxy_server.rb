@@ -65,11 +65,15 @@ module ProxyServer
       @raw_res=nil
       @@em_run=false
       @testcase=[]
-      @testcase_service=[]
       #@testcases=[]
       @testcase_mode=1
       @info=''
       @testcase_start_tag=false
+
+      #用于服务回调
+      @after_response_callbacks=[]
+      @before_request_callbacks=[]
+      @testcase_callbacks=[]
 
     end
 
@@ -92,16 +96,42 @@ module ProxyServer
       res.raw=res.data
     end
 
+    #server.before_request{|req| server.testcase_start}
+    def before_request(req)
+      @before_request_callbacks.each do |callback|
+        callback.call(req)
+      end
+    end
+
+    def before_request_callback(blk)
+      @before_request_callbacks<<blk
+    end
+
+    #server.after_response{|res| server.testcase_start}
+    def after_response(res)
+      @after_response_callbacks.each do |callback|
+        callback.call(res)
+      end
+    end
+
+    def after_response_callback(&blk)
+      @after_response_callbacks<<blk
+    end
+
 
     def save_request(req)
       #录制模式为每个请求对应一个新用例，一个请求可以对应多个响应
-      if @testcase_mode==1 && @testcase_start_tag==false
-        #清空数据，重新开始新的测试用例
-        testcase_stop
-        testcase_start
-        @testcase_start_tag=false
+      if @testcase[-1]==nil
+        #如果有响应，表示这是新的req
+        @testcase<<{:req => req.data}
+      else
+        if @testcase[-1][:res]
+          @testcase<<{:req => req.data}
+        else
+          #否则表示跟上一次的请求是一起的，只是分包而已
+          @testcase[-1][:req]<< req.data
+        end
       end
-      @testcase<<{:req => req.data}
     end
 
     def save_response(res)
@@ -128,7 +158,7 @@ module ProxyServer
       @testcase_start_tag=false
       #重新确定最终值
       return if @testcase==[]
-      @testcase_service.each do |s|
+      @testcase_callbacks.each do |s|
         s.call(@testcase)
       end
 =begin
@@ -140,9 +170,9 @@ if @testcases!=[]
 =end
     end
 
-    def tc(&blk)
-      @testcase_service||=[]
-      @testcase_service<<blk
+    def testcase_callback(&blk)
+      @testcase_callbacks||=[]
+      @testcase_callbacks<<blk
     end
 
     #用于回放请求，做客户端，使用em进行回放
@@ -226,6 +256,7 @@ if @testcases!=[]
       conn.on_data do |raw_req|
         @request.raw=raw_req
         self.decode_request(@request)
+        self.before_request(@request)
         self.save_request(@request)
         self.encode_request(@request)
         #must return the raw data
@@ -237,6 +268,7 @@ if @testcases!=[]
         self.decode_response(@response)
         self.mock_process(@request, @response)
         self.save_response(@response)
+        self.after_response(@response)
         self.encode_response(@response)
 
         #此处如果用于多转发时，需要增加多转发时候的请求销毁，暂未用到，所以保持现状
@@ -270,6 +302,7 @@ if @testcases!=[]
                 puts "ERROR_EM_RUN______________"
                 puts e.message
                 puts e.inspect
+                puts e.backtrace
                 p @info
                 @info=e.message
                 boot=nil
