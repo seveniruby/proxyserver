@@ -6,7 +6,7 @@ task :default => [:test]
 task :test_all do
   Dir["test/test_*.rb"].each do |f|
     p f
-    ruby f
+    ruby "-v #{f}"
   end
 end
 

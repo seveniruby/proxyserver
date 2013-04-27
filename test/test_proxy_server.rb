@@ -214,6 +214,7 @@ if __FILE__==$0 || $0=='<script>'
 
       testcases.each do |expect|
         testcase=server.replay_request(expect)
+        p testcase
         #返回的首页结果应该都是10
         expect_count=expect[0][:res].gsub('class="pt"').count
         res_count=testcase[0][:res].gsub('class="pt"').count
