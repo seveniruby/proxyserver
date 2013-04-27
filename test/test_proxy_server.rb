@@ -167,6 +167,7 @@ if __FILE__==$0 || $0=='<script>'
       assert_equal '200', res.code
       expect=server.testcase
       testcase=server.replay_request
+      wait_http_finsh(testcase)
       #http协议有分包策略，所以同样的请求，得到的结果也可能是不同的，在协议应用方面，还需要做兼容改进
       index=0
       assert_equal expect[0][:res].split("\r\n\r\n")[1..-1], testcase[0][:res].split("\r\n\r\n")[1..-1]
@@ -177,6 +178,7 @@ if __FILE__==$0 || $0=='<script>'
 
       expect=server.testcase
       testcase=server.replay_request
+      wait_http_finsh(testcase)
       #同样的查询得到的动态页面也是不一样，这个必须是fail
       assert_not_equal expect[0][:res], testcase[0][:res]
       server.stop
@@ -201,6 +203,27 @@ if __FILE__==$0 || $0=='<script>'
       server.stop
     end
 
+
+    def wait_http_finsh(testcase)
+      index=0
+      while true do
+        if testcase[-1]
+          if testcase[-1][:res]
+            tag=testcase[-1][:res][-4..-1]
+            p tag
+            if tag=="\r\n\r\n"
+              p 'break'
+              break
+            end
+          end
+        end
+        if index>10
+          break
+        end
+        sleep 1
+        index+=1
+      end
+    end
     def test_testcase
       config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
       server=ProxyServer::ProxyServer.new config
@@ -215,19 +238,7 @@ if __FILE__==$0 || $0=='<script>'
       testcases.each do |expect|
         testcase=server.replay_request(expect)
         #http的响应较慢，需要等待。目前在proxyserver这一层是不能判断http是否返回完全，需要在更高http level上判断返回
-        while true do
-          if testcase[-1]
-            if testcase[-1][:res]
-              tag=testcase[-1][:res][-4..-1]
-              p tag
-              if tag=="\r\n\r\n"
-                p 'break'
-                break
-              end
-            end
-          end
-          sleep 1
-        end
+        wait_http_finsh(testcase)
         #返回的首页结果应该都是10
         expect_count=expect[0][:res].gsub('class="pt"').count
         res_count=testcase[0][:res].gsub('class="pt"').count
