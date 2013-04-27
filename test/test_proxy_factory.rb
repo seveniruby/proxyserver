@@ -26,7 +26,7 @@ if __FILE__==$0 || $0=='<script>'
       get 'http://www.baidu.com/','127.0.0.1',@port
     end
 
-		def test_form
+		def ttest_form
 			http=Proxys.new 'protocol'=>'form', 'forward_host'=>'www.sogou.com',
                       'forward_port'=>80, 'port'=>@port, 'host'=>'127.0.0.1'
 			http.start
@@ -43,8 +43,8 @@ if __FILE__==$0 || $0=='<script>'
 		def test_http_mock
 			http=Proxys.new 'protocol'=>'http', 'forward_host'=>'www.baidu.com', 'forward_port'=>80, 'port'=>@port, 'host'=>'127.0.0.1'
 			http.mock do |req, res|
-				p req.size
-				p res.size
+				p req.raw.size
+				p res.raw.size
 				res
 			end
 			http.start
