@@ -9,7 +9,7 @@ require 'tracer'
 
 #兼容jruby和warble
 if __FILE__==$0 || $0=='<script>'
-  class TestHttp < Test::Unit::TestCase
+  class TestProxy < Test::Unit::TestCase
     def test_get
       get 'http://www.baidu.com'
     end
