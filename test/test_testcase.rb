@@ -2,10 +2,8 @@ $:.unshift(File.dirname(__FILE__) + '/../test')
 require 'test_helpper'
 require 'proxy_server'
 require 'test/unit'
-
-
-
-
+require 'ci/reporter/test_unit'
+require 'ci/reporter/rake/minitest_loader'
 
 def test_add_class
   TestReplay.add_class 'TestABC'
