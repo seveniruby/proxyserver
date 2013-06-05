@@ -15,7 +15,7 @@ task :test do
   Dir[
       "test/test_proxy_server.rb",
       #"test/test_http_proxy.rb",
-      "test/test_proxy_factory.rb"
+      #"test/test_proxy_factory.rb"
   ].each do |f|
     p f
     ruby f
