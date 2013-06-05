@@ -58,7 +58,7 @@ module ProxyServer
       @thread=nil
       @proxy=nil
       @stub=nil
-      @mocks=[]
+      @mock_callbacks=[]
       @request=ProxyRequest.new
       @response=ProxyResponse.new
       @raw_req=nil
@@ -103,7 +103,7 @@ module ProxyServer
       end
     end
 
-    def before_request_callback(blk)
+    def before_request_callback(&blk)
       @before_request_callbacks<<blk
     end
 
@@ -120,54 +120,11 @@ module ProxyServer
 
 
     def save_request(req)
-      #录制模式为每个请求对应一个新用例，一个请求可以对应多个响应
-      if @testcase[-1]==nil
-        #如果有响应，表示这是新的req
-        @testcase<<{:req => req.data}
-      else
-        if @testcase[-1][:res]
-          @testcase<<{:req => req.data}
-        else
-          #否则表示跟上一次的请求是一起的，只是分包而已
-          @testcase[-1][:req]<< req.data
-        end
-      end
+      @testcase << { :req => req.data }
     end
 
     def save_response(res)
-      #@testcase<<{:res => res.data}
-      #使用更好的结构来保存数据
-      #多次的响应被合并到:res
-      #:req=>xxx, :res=xxx
-      @testcase[-1][:res]||=''
-      @testcase[-1][:res]<<res.data
-    end
-
-    #定义测试用例的开始标记
-    #用于用户在外部标记自己的测试用例范围
-    def testcase_start
-      @testcase=[]
-      @testcase_start_tag=true
-      #先占位
-      #暂时去掉这个功能，让外部用户来控制如何存储每个测试用例的数据
-      #@testcases<<@testcase
-    end
-
-    #测试用例执行完成的标记
-    def testcase_stop
-      @testcase_start_tag=false
-      #重新确定最终值
-      return if @testcase==[]
-      @testcase_callbacks.each do |s|
-        s.call(@testcase)
-      end
-=begin
-if @testcases!=[]
-      if @testcase!=[]
-        @testcases[-1]=@testcase.dup
-      end
-      #end
-=end
+      @testcase << { :res=>res.data }
     end
 
     def testcase_callback(&blk)
@@ -193,23 +150,48 @@ if @testcases!=[]
           #in windows, connect 0.0.0.0 would fail , windows only understand  127.0.0.1
           EM.connect '127.0.0.1', @config['port'], ProxyClient do |client|
             testcase.each do |tc|
-              req.data=tc[:req]
-              encode_request(req)
-              #client.send_data "GET / HTTP/1.1\r\nHost: www.sogou.com\r\n\r\n"
-              client.send_data req.raw
+              if tc[:req]
+                req.data=tc[:req]
+                encode_request(req)
+                #client.send_data "GET / HTTP/1.1\r\nHost: www.sogou.com\r\n\r\n"
+                client.send_data req.raw
+                p 'send ok'
+              end
             end
           end
         end
+          p 'em run after'
       rescue Exception => e
         p "ERROR++++++++++++"
         p e.message
         raise
       end
-      @testcase
     end
 
     #用于回放响应，做mock服务器
     def replay_response
+      testcase||=@testcase
+      req=ProxyRequest.new
+      expect=ProxyResponse.new
+      res=ProxyResponse.new
+
+      before_request_callback do |req|
+        send_start=false
+        testcase.each do |tc|
+          if send_start==true && tc[:res]
+            send tc[:res]
+            next
+          end
+          if send_start==true && tc[:res]==nil
+            send_start=false
+            break
+          end
+          if tc[:req]==req
+            send_start=true
+            next
+          end
+        end
+      end
 
     end
 
@@ -222,13 +204,13 @@ if @testcases!=[]
     #提供用户机制干预结果。
     #可参考测试用例中的mock方法
     def mock_process(req, res)
-      @mocks.each do |m|
+      @mock_callbacks.each do |m|
         m.call(req, res)
       end
     end
 
     def mock(&blk)
-      @mocks<< blk
+      @mock_callbacks<< blk
     end
 
     def send(data)

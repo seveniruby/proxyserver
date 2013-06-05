@@ -9,7 +9,7 @@ require 'tracer'
 
 #兼容jruby和warble
 if __FILE__==$0 || $0=='<script>'
-  class TestProxy < Test::Unit::TestCase
+  class TestProxy < MiniTest::Unit::TestCase
     def test_get
       get 'http://www.baidu.com'
     end
@@ -131,56 +131,88 @@ if __FILE__==$0 || $0=='<script>'
 
     end
 
-    def test_save
+    def test_testcase
       #stub=StubServer.new
       #stub.start
       #config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => '127.0.0.1', "forward_port" => 65530}
 
       config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
       server=ProxyServer::ProxyServer.new config
-
       testcases=[]
-      server.testcase_callback do |testcase|
-        testcases<<testcase
-      end
       server.start
       query(server)
-      assert_equal 3, testcases.count
+      pp server.testcase
+      assert_equal true, server.testcase.count>7
+      assert_equal 19, server.testcase.map{|tc| tc[:res]}.join.gsub('class="pt"').count
       server.stop
     end
 
 
-    def test_replay_request
+    def test_replay_static
       config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
       server=ProxyServer::ProxyServer.new config
       server.start()
-      #幸好现在的网站都不检查host，后续做http的应用时，host需要修改
-      #res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
-      #assert_equal '200', res.code
-      #res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'systemtap -english')
-      #assert_equal '200', res.code
-      #assert_equal 3, server.testcases.count
-
-
       uri = URI('http://127.0.0.1:8078/docs/about.htm')
       res = Net::HTTP.post_form(uri, 'q' => 'ruby', 'query' => 'ruby -english')
       assert_equal '200', res.code
       expect=server.testcase
-      testcase=server.replay_request
-      wait_http_finsh(testcase)
-      #http协议有分包策略，所以同样的请求，得到的结果也可能是不同的，在协议应用方面，还需要做兼容改进
-      index=0
-      assert_equal expect[0][:res].split("\r\n\r\n")[1..-1], testcase[0][:res].split("\r\n\r\n")[1..-1]
+      server.replay_request
+      #需要增加判断是否返回响应
+      sleep 2
+      testcase=server.testcase
+      pp expect
+      pp testcase
+      p       expect.map{|tc| tc[:res]}.join
+      p testcase.map{|tc| tc[:res]}.join
+      assert_equal expect.map{|tc| tc[:res]}.join.split("\r\n\r\n")[1..-1], testcase.map{|tc| tc[:res]}.join.split("\r\n\r\n")[1..-1]
+      server.stop
+    end
 
+    def test_replay_dynamic
+      config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
+      server=ProxyServer::ProxyServer.new config
+      server.start()
       uri = URI('http://127.0.0.1:8078/web')
       res = Net::HTTP.post_form(uri, 'q' => 'ruby', 'query' => 'ruby -english')
       assert_equal '200', res.code
 
       expect=server.testcase
-      testcase=server.replay_request
-      wait_http_finsh(testcase)
-      #同样的查询得到的动态页面也是不一样，这个必须是fail
-      assert_not_equal expect[0][:res], testcase[0][:res]
+      server.replay_request
+
+      p 'expect'
+      pp expect
+      sleep 2
+      testcase=server.testcase
+      p 'testcase'
+      pp testcase
+      assert_equal true, testcase.count>10
+      assert_equal true, expect.count>10
+      assert_equal expect.map{|tc| tc[:res]}.join.gsub('class="pt"').count, testcase.map{|tc| tc[:res]}.join.gsub('class="pt"').count
+      server.stop
+    end
+
+    def test_replay_response
+
+
+      config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
+      server=ProxyServer::ProxyServer.new config
+      server.start()
+      uri = URI('http://127.0.0.1:8078/web')
+      res = Net::HTTP.post_form(uri, 'q' => 'ruby', 'query' => 'ruby -english')
+      assert_equal '200', res.code
+
+      expect=server.testcase
+      server.replay_response
+
+      p 'expect'
+      pp expect
+      sleep 2
+      testcase=server.testcase
+      p 'testcase'
+      pp testcase
+      assert_equal testcase.count, expect.count
+      assert_equal expect.map{|tc| tc[:res]}.join, testcase.map{|tc| tc[:res]}.join
+      assert_equal expect.map{|tc| tc[:res]}.join.gsub('class="pt"').count, testcase.map{|tc| tc[:res]}.join.gsub('class="pt"').count
       server.stop
     end
 
@@ -193,128 +225,27 @@ if __FILE__==$0 || $0=='<script>'
       #幸好现在的网站都不检查host，后续做http的应用时，host需要修改
       res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
       assert_equal '200', res.code
-      assert_equal 10, server.testcase[0][:res].gsub('class="pt"').count
+      assert_equal 10, server.testcase.map{|tc| tc[:res]}.join.gsub('class="pt"').count
+
+      server.testcase=[]
       res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'systemtap -english')
-      assert_equal 10, server.testcase[0][:res].gsub('class="pt"').count
+      assert_equal 10, server.testcase.map{|tc| tc[:res]}.join.gsub('class="pt"').count
       assert_equal '200', res.code
+      server.testcase=[]
       res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'systemtap -english')
       assert_equal '200', res.code
-      assert_equal 10, server.testcase[0][:res].gsub('class="pt"').count
+      assert_equal 10, server.testcase.map{|tc| tc[:res]}.join.gsub('class="pt"').count
       server.stop
-    end
-
-
-    def wait_http_finsh(testcase)
-      index=0
-      while true do
-        if testcase[-1]
-          if testcase[-1][:res]
-            tag=testcase[-1][:res][-4..-1]
-            p tag
-            if tag=="\r\n\r\n"
-              p 'break'
-              break
-            end
-          end
-        end
-        if index>10
-          break
-        end
-        sleep 1
-        index+=1
-      end
-    end
-    def test_testcase
-      config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
-      server=ProxyServer::ProxyServer.new config
-      testcases=[]
-      server.testcase_callback do |testcase|
-        testcases<<testcase
-      end
-      server.start()
-      query(server)
-      assert_equal 3, testcases.count
-
-      testcases.each do |expect|
-        testcase=server.replay_request(expect)
-        #http的响应较慢，需要等待。目前在proxyserver这一层是不能判断http是否返回完全，需要在更高http level上判断返回
-        wait_http_finsh(testcase)
-        #返回的首页结果应该都是10
-        expect_count=expect[0][:res].gsub('class="pt"').count
-        res_count=testcase[0][:res].gsub('class="pt"').count
-        #结果应该不同，因为有动态内容
-        assert_not_equal expect, testcase
-        assert_equal expect_count, res_count
-      end
-      server.stop
-
-=begin
-      TestReplay.add_class("TestXXX")
-      index=0
-      testcases.each do |expect|
-        TestReplay.add_testcase(index) do
-          testcase=server.replay_request(expect)
-          #返回的首页结果应该都是10
-          expect_count=expect[0][:res].gsub('class="pt"').count
-          res_count=testcase[0][:res].gsub('class="pt"').count
-          #结果应该不同，因为有动态内容
-          assert_not_equal expect, testcase
-          assert_equal expect_count, res_count
-        end
-      end
-=end
     end
 
     def query(server)
       uri = URI('http://127.0.0.1:8078/web')
-      server.testcase_start
       res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
       assert_equal '200', res.code
-      server.testcase_stop
-
-      server.testcase_start
       res = Net::HTTP.post_form(uri, 'q' => 'valgrind', 'query' => 'valgrind -english')
       assert_equal '200', res.code
-      server.testcase_stop
-
-      server.testcase_start
       res = Net::HTTP.post_form(uri, 'q' => 'seveniruby', 'query' => 'seveniruby -english')
       assert_equal '200', res.code
-      server.testcase_stop
-
-    end
-
-    def test_add_testcase
-      config={"host" => '0.0.0.0', 'port' => 8078, 'forward_host' => 'www.sogou.com', "forward_port" => 80}
-      server=ProxyServer::ProxyServer.new config
-      testcases=[]
-      server.testcase_callback do |testcase|
-        testcases<<testcase
-      end
-      server.start()
-      query(server)
-      assert_equal 3, testcases.count
-      server.stop
-
-=begin
-      index=0
-      #增加测试用例集
-      TestReplay.add_class("TestCount")
-      testcases.each do |expect|
-        #增加测试集中的测试用例
-        TestCount.add_testcase(index) do
-          testcase=server.replay_request(expect)
-          #返回的首页结果应该都是10
-          expect_count=expect[0][:res].gsub('class="pt"').count
-          res_count=testcase[0][:res].gsub('class="pt"').count
-          #结果应该不同，因为有动态内容
-          assert_not_equal expect, testcase
-          assert_equal expect_count, res_count
-        end
-      end
-      #can't run testcase in testcase, you can see the test_testcase.rb for example
-      #TestReplay.run
-=end
 
     end
 
@@ -338,32 +269,6 @@ if __FILE__==$0 || $0=='<script>'
       server=ProxyServer::ProxyServer.new config
       server.start
       server
-    end
-
-    def test_testcase_start
-      server=start_sogou
-      testcases=[]
-      server.testcase_callback do |testcase|
-        testcases<< testcase
-      end
-      server.testcase_start
-      uri = URI('http://127.0.0.1:8078/web')
-      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
-      assert_equal '200', res.code
-
-      uri = URI('http://127.0.0.1:8078/web')
-      res = Net::HTTP.post_form(uri, 'q' => 'systemtap', 'query' => 'systemtap -english')
-      assert_equal '200', res.code
-      server.testcase_stop
-      assert_equal 1, testcases.count
-      assert_equal 2, server.testcase.count
-      server.stop
-
-      testcases=[]
-      server.start
-      query(server)
-      server.stop
-      assert_equal 3, testcases.count
     end
 
     def teardown

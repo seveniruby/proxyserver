@@ -1,6 +1,5 @@
 require 'test/unit'
-require 'ci/reporter/test_unit'
-require 'ci/reporter/rake/minitest_loader'
+
 
 class TestReplay < Test::Unit::TestCase
   def self.add_testcase(m, &block)
