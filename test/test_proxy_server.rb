@@ -185,8 +185,7 @@ if __FILE__==$0 || $0=='<script>'
       testcase=server.testcase
       p 'testcase'
       pp testcase
-      assert_equal true, testcase.count>10
-      assert_equal true, expect.count>10
+      assert_equal 9, testcase.map{|tc| tc[:res]}.join.gsub('class="pt"').count
       assert_equal expect.map{|tc| tc[:res]}.join.gsub('class="pt"').count, testcase.map{|tc| tc[:res]}.join.gsub('class="pt"').count
       server.stop
     end
