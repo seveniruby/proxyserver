@@ -274,6 +274,20 @@ if __FILE__==$0 || $0=='<script>'
       EM.stop if EM.reactor_thread
       sleep 2
     end
+
+
+    def test_loc
+	    config={"host" => '0.0.0.0', 'port' => 80, 'forward_host' => 'loc.map.baidu.com', "forward_port" => 80}
+	    server=ProxyServer::ProxyServer.new config
+	    server.mock do |req, res|
+		    p req
+		    p res
+		    #res.data="HTTP/1.1 200 OK\r\nContent-Length:4\r\n\r\nmock"
+	    end
+	    server.start
+	    server.keep
+	    #p `curl -x 127.0.0.1:8078 http://www.baidu.com/ 2>&1`
+    end
   end
 
 
